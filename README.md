@@ -1,4 +1,4 @@
-# Distributed Hash Table - PPCA 2020
+# Distributed Hash Table - PPCA 2021
 
 ## Overview
 
@@ -84,7 +84,7 @@ The current test procedure is:
 
 ### About Go Remote Debug
 
-Please refer to this .
+Please refer to this [guide](https://github.com/xmhuangzhen/DHT-2021/blob/master/guide/Go-Remote-Debug.md).
 
 ## Reference
 
