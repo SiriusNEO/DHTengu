@@ -1,0 +1,4 @@
+# Project exclude paths
+/pkg
+/src/github.com
+/src/golang.org
