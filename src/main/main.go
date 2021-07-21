@@ -1,115 +1,232 @@
 package main
 
 import (
-	"flag"
+	"chord"
+	"fmt"
 	"math/rand"
-	"os"
+	"net"
+	"runtime"
 	"time"
 )
 
-var (
-	help     bool
-	testName string
+const (
+	myselfTestNodeSize = 5
+	kvPairSize = 100
 )
 
-func init() {
-	flag.BoolVar(&help, "help", false, "help")
-	flag.StringVar(&testName, "test", "", "which test(s) do you want to run: basic/advance/all")
+func GetLocalAddress() string {
+	var localaddress string
 
-	flag.Usage = usage
-	flag.Parse()
-
-	if help || (testName != "basic" && testName != "advance" && testName != "all") {
-		flag.Usage()
-		os.Exit(0)
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		panic("init: failed to find network interfaces")
 	}
 
-	rand.Seed(time.Now().UnixNano())
+	// find the first non-loopback interface with an IP address
+	for _, elt := range ifaces {
+		if elt.Flags&net.FlagLoopback == 0 && elt.Flags&net.FlagUp != 0 {
+			addrs, err := elt.Addrs()
+			if err != nil {
+				panic("init: failed to get addresses for network interface")
+			}
+
+			for _, addr := range addrs {
+				ipnet, ok := addr.(*net.IPNet)
+				if ok {
+					if ip4 := ipnet.IP.To4(); len(ip4) == net.IPv4len {
+						localaddress = ip4.String()
+						break
+					}
+				}
+			}
+		}
+	}
+	if localaddress == "" {
+		panic("init: failed to find non-loopback interface with valid address on this node")
+	}
+
+	return localaddress
+}
+
+func portToAddr(ip string, port int) string {
+	return fmt.Sprintf("%s:%d", ip, port)
 }
 
 func main() {
-	_, _ = yellow.Println("Welcome to DHT-2020 Test Program!\n")
+	/*
+	a := big.NewInt(23)
+	b := big.NewInt(23)
+	c := big.NewInt(23)
 
-	var basicFailRate float64
-	var forceQuitFailRate float64
-	var QASFailRate float64
+	fmt.Println(chord.IsIn(a, b, c, false, true))
+	fmt.Println(a, b, c)
+	*/
+	chord.LogInit()
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	switch testName {
-	case "all":
-		fallthrough
-	case "basic":
-		_, _ = yellow.Println("Basic Test Begins:")
-		basicPanicked, basicFailedCnt, basicTotalCnt := basicTest()
-		if basicPanicked {
-			_, _ = red.Printf("Basic Test Panicked.")
-			os.Exit(0)
-		}
+	localAddress := GetLocalAddress()
+	firstPort := 20000
 
-		basicFailRate = float64(basicFailedCnt) / float64(basicTotalCnt)
-		if basicFailRate > basicTestMaxFailRate {
-			_, _ = red.Printf("Basic test failed with fail rate %.4f\n", basicFailRate)
-		} else {
-			_, _ = green.Printf("Basic test passed with fail rate %.4f\n", basicFailRate)
-		}
+	nodes := new([myselfTestNodeSize + 1]PubNodeType)
+	nodeAddresses := new([myselfTestNodeSize + 1]string)
+	nodesInNetwork := make([]int, 0, myselfTestNodeSize+1)
 
-		if testName == "basic" {
-			break
-		}
-		time.Sleep(afterTestSleepTime)
-		fallthrough
-	case "advance":
-		_, _ = yellow.Println("Advance Test Begins:")
-
-		/* ------ Force Quit Test Begins ------ */
-		forceQuitPanicked, forceQuitFailedCnt, forceQuitTotalCnt := forceQuitTest()
-		if forceQuitPanicked {
-			_, _ = red.Printf("Force Quit Test Panicked.")
-			os.Exit(0)
-		}
-
-		forceQuitFailRate = float64(forceQuitFailedCnt) / float64(forceQuitTotalCnt)
-		if forceQuitFailRate > forceQuitMaxFailRate {
-			_, _ = red.Printf("Force quit test failed with fail rate %.4f\n", forceQuitFailRate)
-		} else {
-			_, _ = green.Printf("Force quit test passed with fail rate %.4f\n", forceQuitFailRate)
-		}
-		time.Sleep(afterTestSleepTime)
-		/* ------ Force Quit Test Ends ------ */
-
-		/* ------ Quit & Stabilize Test Begins ------ */
-		QASPanicked, QASFailedCnt, QASTotalCnt := quitAndStabilizeTest()
-		if QASPanicked {
-			_, _ = red.Printf("Quit & Stabilize Test Panicked.")
-			os.Exit(0)
-		}
-
-		QASFailRate = float64(QASFailedCnt) / float64(QASTotalCnt)
-		if QASFailRate > QASMaxFailRate {
-			_, _ = red.Printf("Quit & Stabilize test failed with fail rate %.4f\n", QASFailRate)
-		} else {
-			_, _ = green.Printf("Quit & Stabilize test passed with fail rate %.4f\n", QASFailRate)
-		}
-		/* ------ Quit & Stabilize Test Ends ------ */
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i] = *NewPubNode(portToAddr(localAddress, firstPort + i))
+		nodeAddresses[i] = portToAddr(localAddress, firstPort + i)
+		go nodes[i].Run()
 	}
 
-	_, _ = cyan.Println("\nFinal print:")
-	if basicFailRate > basicTestMaxFailRate {
-		_, _ = red.Printf("Basic test failed with fail rate %.4f\n", basicFailRate)
+	time.Sleep(200 * time.Millisecond)
+
+	fmt.Println("Run Finish")
+
+	fmt.Println(chord.Mod)
+
+	nodes[0].Create()
+
+	nodesInNetwork = append(nodesInNetwork, 0)
+
+	testKey := [] string {"THU", "PKU", "FDU", "SJTU", "ZJU"}
+	testVal := [] string {"Beijing", "Beijing", "Shanghai", "Shanghai", "Zhejiang"}
+
+	for i := 0; i < 5; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(testKey[i], testVal[i]))
+	}
+
+	time.Sleep(time.Second)
+
+	for i := 1; i <= myselfTestNodeSize - 2; i++ {
+		fmt.Println("Join Round ", i)
+		addr := nodeAddresses[nodesInNetwork[rand.Intn(len(nodesInNetwork))]]
+		fmt.Println(nodes[i].Join(addr))
+		nodesInNetwork = append(nodesInNetwork, i)
+		fmt.Println("Join Finish ", i)
+		time.Sleep(time.Second)
+	}
+
+	time.Sleep(time.Second * 5)
+
+	fmt.Println("Join Finish.")
+
+	nodes[3].Delete("FDU")
+	nodes[3].Delete("ZJU")
+	nodes[3].Quit()
+
+	nodes[4].Join(nodeAddresses[0])
+
+	time.Sleep(time.Second * 5)
+
+	fmt.Println("Join 4")
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+
+	time.Sleep(time.Second * 10)
+
+	/*
+	nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-1)]].Put("FDU", "Shanghai")
+	nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-1)]].Put("ZJU", "Zhejiang")
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+
+	for i := 0; i < 5; i++ {
+		fmt.Printf("%v %v ", i, testKey[i])
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-1)]].Get(testKey[i]))
+	}*/
+
+
+	/*nodes[0].Quit()
+
+	time.Sleep(time.Second * 10)
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+	for i := 0; i < 5; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-1)+1]].Get(testKey[i]))
+	}*/
+
+	/*for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+	for i := 0; i <= kvPairSize; i++ {
+		nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(strconv.Itoa(i), strconv.Itoa(i))
+	}
+
+	for i := 0; i <= kvPairSize; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get(strconv.Itoa(i)))
+	}
+
+	for i := 0; i <= kvPairSize; i+=2 {
+		nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Delete(strconv.Itoa(i))
+	}
+
+	for i := 0; i <= kvPairSize; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get(strconv.Itoa(i)))
+	}
+
+	for i := 0; i < 10; i++ {
+		nodes[i].Quit()
+		time.Sleep(time.Second)
+	}
+
+	time.Sleep(10 * time.Second)
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+	for i := 0; i <= kvPairSize; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-10)+10]].Get(strconv.Itoa(i)))
+	}
+
+	for i := 0; i <= kvPairSize; i+=2 {
+		nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-10)+10]].Put(strconv.Itoa(i), strconv.Itoa(i))
+	}
+
+	for i := 0; i <= kvPairSize; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-10)+10]].Get(strconv.Itoa(i)))
+	}*/
+
+	/*
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+	for i := 0; i < 5; i++ {
+		_, city := nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get(testKey[i])
+		fmt.Println(testKey[i], "@", city)
+	}
+
+	nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Delete("SJTU")
+
+	fmt.Println("SJTU Deleted.")
+
+	founded, city := nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get("SJTU")
+
+	if !founded {
+		fmt.Println("什么破学校 找不到捏")
 	} else {
-		_, _ = green.Printf("Basic test passed with fail rate %.4f\n", basicFailRate)
+		fmt.Println(city)
 	}
-	if forceQuitFailRate > forceQuitMaxFailRate {
-		_, _ = red.Printf("Force quit test failed with fail rate %.4f\n", forceQuitFailRate)
-	} else {
-		_, _ = green.Printf("Force quit test passed with fail rate %.4f\n", forceQuitFailRate)
-	}
-	if QASFailRate > QASMaxFailRate {
-		_, _ = red.Printf("Quit & Stabilize test failed with fail rate %.4f\n", QASFailRate)
-	} else {
-		_, _ = green.Printf("Quit & Stabilize test passed with fail rate %.4f\n", QASFailRate)
-	}
-}
+	*/
 
-func usage() {
-	flag.PrintDefaults()
+	/*nodes[0].Quit()
+
+	time.Sleep(5 * time.Second)
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}*/
+
+	//time.Sleep(100000 * time.Millisecond)
 }
