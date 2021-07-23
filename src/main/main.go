@@ -87,8 +87,8 @@ func main() {
 
 	nodesInNetwork = append(nodesInNetwork, 0)
 
-	testKey := [] string {"THU", "PKU", "FDU", "SJTU", "ZJU"}
-	testVal := [] string {"Beijing", "Beijing", "Shanghai", "Shanghai", "Zhejiang"}
+	testKey := [] string {"THU", "PKU", "FDU", "SJTU", "ZJU", "NJU", "USTC"}
+	testVal := [] string {"Beijing", "Beijing", "Shanghai", "Shanghai", "Zhejiang", "Nanjing", "Anhui"}
 
 	for i := 0; i < 5; i++ {
 		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(testKey[i], testVal[i]))
@@ -96,7 +96,7 @@ func main() {
 
 	time.Sleep(time.Second)
 
-	for i := 1; i <= myselfTestNodeSize - 2; i++ {
+	for i := 1; i <= myselfTestNodeSize; i++ {
 		fmt.Println("Join Round ", i)
 		addr := nodeAddresses[nodesInNetwork[rand.Intn(len(nodesInNetwork))]]
 		fmt.Println(nodes[i].Join(addr))
@@ -105,26 +105,34 @@ func main() {
 		time.Sleep(time.Second)
 	}
 
-	time.Sleep(time.Second * 5)
-
-	fmt.Println("Join Finish.")
-
-	nodes[3].Delete("FDU")
-	nodes[3].Delete("ZJU")
-	nodes[3].Quit()
-
-	nodes[4].Join(nodeAddresses[0])
-
-	time.Sleep(time.Second * 5)
-
-	fmt.Println("Join 4")
+	time.Sleep(time.Second * 10)
 
 	for i := 0; i <= myselfTestNodeSize; i++ {
 		nodes[i].receiver.Node.Display()
 	}
 
+	for i := 5; i < 7; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(testKey[i], testVal[i]))
+	}
 
-	time.Sleep(time.Second * 10)
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+	for i := 1; i <= myselfTestNodeSize; i++ {
+		time.Sleep(time.Second)
+		nodes[i].ForceQuit()
+	}
+
+	time.Sleep(80 * time.Millisecond)
+
+	for i := 0; i < 7; i++ {
+		fmt.Println(nodes[0].Get(testKey[i]))
+	}
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
 
 	/*
 	nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork)-1)]].Put("FDU", "Shanghai")
@@ -174,7 +182,7 @@ func main() {
 	}
 
 	for i := 0; i < 10; i++ {
-		nodes[i].Quit()
+		nodes[i].ForceQuit()
 		time.Sleep(time.Second)
 	}
 

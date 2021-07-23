@@ -44,6 +44,7 @@ func (this *PubNodeType) Run() {
 	}
 	this.receiver.Node.Running = true
 	go this.receiver.Node.Updating()
+	go this.receiver.Node.FixFingers()
 
 	chord.Log.WithFields(logrus.Fields{
 		"addr" : this.receiver.Node.Addr,
@@ -61,7 +62,7 @@ func (this PubNodeType) Join(addr string) bool {
 }
 
 func (this PubNodeType) Quit() {
-	this.receiver.Node.Quit()
+	this.receiver.Node.ForceQuit()
 	this.receiver.Node.Running = false
 	err := this.receiver.Listener.Close()
 	if err == nil {
@@ -72,7 +73,14 @@ func (this PubNodeType) Quit() {
 }
 
 func (this PubNodeType) ForceQuit() {
-	return
+	this.receiver.Node.ForceQuit()
+	this.receiver.Node.Running = false
+	err := this.receiver.Listener.Close()
+	if err == nil {
+		chord.Log.WithFields(logrus.Fields{
+			"ip" : this.receiver.Node.Addr,
+		}).Info("Node Force Quit.")
+	}
 }
 
 func (this PubNodeType) Ping(addr string) bool {

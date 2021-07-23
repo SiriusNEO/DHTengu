@@ -14,13 +14,11 @@ var (
 )
 
 func init() {
-	/*flag.BoolVar(&help, "help", false, "help")
+	flag.BoolVar(&help, "help", false, "help")
 	flag.StringVar(&testName, "test", "", "which test(s) do you want to run: basic/advance/all")
 
 	flag.Usage = usage
-	flag.Parse()*/
-
-	testName = "basic"
+	flag.Parse()
 
 	chord.LogInit()
 

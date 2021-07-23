@@ -4,3 +4,5 @@
 /src/golang.org
 /.idea
 /.git
+/main
+/test

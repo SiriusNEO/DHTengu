@@ -81,9 +81,6 @@ func (this *ReceiverType) Delete(args string, reply *bool) error {
 }
 
 func (this *ReceiverType) DirectlyPut(args StrPair, reply *bool) error {
-	this.Node.mux.Lock()
-	defer this.Node.mux.Unlock()
-
 	founded, _ := this.Node.data.Load(args.First)
 
 	if founded {
@@ -95,11 +92,26 @@ func (this *ReceiverType) DirectlyPut(args StrPair, reply *bool) error {
 	return nil
 }
 
-func (this *ReceiverType) DirectlyDelete(args string, reply *bool) error {
-	this.Node.mux.Lock()
-	defer this.Node.mux.Unlock()
+func (this *ReceiverType) BackupDirectlyPut(args StrPair, reply *bool) error {
+	founded, _ := this.Node.backup.Load(args.First)
 
+	if founded {
+		*reply = false
+	}
+
+	this.Node.backup.Store(args.First, args.Second)
+	*reply = true
+	return nil
+}
+
+func (this *ReceiverType) DirectlyDelete(args string, reply *bool) error {
 	*reply = this.Node.data.Delete(args)
+
+	return nil
+}
+
+func (this *ReceiverType) BackupDirectlyDelete(args string, reply *bool) error {
+	*reply = this.Node.backup.Delete(args)
 
 	return nil
 }
@@ -110,6 +122,14 @@ func (this *ReceiverType) GetData(_ int, reply *map[string]string) error {
 
 	*reply = this.Node.data.hashMap
 
+	return nil
+}
+
+func (this *ReceiverType) UpdateBackup(args map[string]string, reply *int) error {
+	this.Node.mux.Lock()
+	defer this.Node.mux.Unlock()
+
+	this.Node.backup.hashMap = args
 	return nil
 }
 

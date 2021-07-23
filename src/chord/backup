@@ -189,17 +189,10 @@ func (this *NodeType) Join(ip string) bool {
 		}
 	}
 
-	this.backup.lock.Lock()
-	client.Call("ReceiverType.GetData", 0, &this.backup.hashMap)
-	this.backup.lock.Unlock()
-
+	client.Call("ReceiverType.GetData", 0, &this.backup)
 	var succPre AddrType
-	var ret int
-
 	client.Call("ReceiverType.GetPredecessor", 0, &succPre)
 	client.Close()
-
-	this.predecessor = succPre
 
 	client, err = Diag(succPre.Ip)
 
@@ -211,8 +204,10 @@ func (this *NodeType) Join(ip string) bool {
 		return false
 	}
 
-	client.Call("ReceiverType.UpdateBackup", this.data.hashMap, &ret)
-	client.Close()
+	for key := range this.data.hashMap {
+		var ret bool
+		client.Call("ReceiverType.BackupDirectlyPut", StrPair{key, this.data.hashMap[key]}, &ret)
+	}
 
 	return true
 }
@@ -297,9 +292,9 @@ func (this *NodeType) Put(key string, value string) bool {
 			}).Error("Put Failed. ")
 			return false
 		}
+
 		this.data.Store(key, value)
 		client, err := Diag(this.predecessor.Ip)
-		defer client.Close()
 
 		if err != nil {
 			Log.WithFields(logrus.Fields{
@@ -308,6 +303,8 @@ func (this *NodeType) Put(key string, value string) bool {
 			}).Error("Diag Failed. " + err.Error())
 			return true
 		}
+
+		defer client.Close()
 
 		var ret bool
 		client.Call("ReceiverType.BackupDirectlyPut", StrPair{key, value}, &ret)
@@ -383,7 +380,7 @@ func (this *NodeType) Delete(key string) bool {
 	keyId := Hash(key)
 
 	if IsIn(&this.predecessor.Id, &this.Addr.Id, &keyId, false, true) {
-		this.succListFlush()
+
 		client, err := Diag(this.predecessor.Ip)
 		defer client.Close()
 
@@ -433,12 +430,6 @@ func (this *NodeType) checkPredecessor()  {
 	defer this.mux.Unlock()
 	err := Ping(this.predecessor.Ip)
 	if err != nil {
-		/*
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : this.predecessor.Ip,
-		}).Error("Ping Failed. " + err.Error())
-		*/
 		this.predecessor = AddrType{"", *big.NewInt(0)}
 	}
 }
@@ -455,40 +446,37 @@ func (this *NodeType) succListFlush() {
 		this.mux.Unlock()
 
 		ping := Ping(succNow.Ip)
+
 		if ping != nil && succNow.Ip != "" && j < SuccListLen-1 {
 			flag = true
-			 Log.WithFields(logrus.Fields{
-				 "from": this.Addr.Ip,
-				 "to":   succNow.Ip,
-			 }).Info("UPD succ")
 		}
+
 		if ping == nil {
 			if flag {
-				client, err1 := Diag(succNow.Ip)
+				client, err := Diag(succNow.Ip)
 
-				if err1 != nil {
+				if err != nil {
 					Log.WithFields(logrus.Fields{
-						"from": this.Addr.Ip,
-						"to":   succNow.Ip,
-					}).Error("Diag Failed. " + err1.Error())
-				} else {
-					this.mux.Lock()
-					thisBackup := this.backup.hashMap
-					this.mux.Unlock()
-
-					for key := range thisBackup {
-						var ret bool
-						client.Call("ReceiverType.DirectlyPut", StrPair{key, thisBackup[key]}, &ret)
-					}
-					var tempBackup map[string]string
-					client.Call("ReceiverType.GetData", 0, &tempBackup)
-
-					this.mux.Lock()
-					this.backup.hashMap = tempBackup
-					this.mux.Unlock()
-
-					client.Close()
+						"from" : this.Addr.Ip,
+						"to" : succNow.Ip,
+					}).Error("Diag Failed. " + err.Error())
 				}
+
+				this.mux.Lock()
+				thisBackup := this.backup.hashMap
+				this.mux.Unlock()
+
+				for key := range thisBackup {
+					var ret bool
+					client.Call("ReceiverType.DirectlyPut", StrPair{key, thisBackup[key]}, &ret)
+				}
+
+				var sucData map[string]string
+				client.Call("ReceiverType.GetData", 0, &sucData)
+
+				this.mux.Lock()
+				this.backup.hashMap = sucData
+				this.mux.Unlock()
 			}
 			break
 		}

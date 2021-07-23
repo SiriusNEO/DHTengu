@@ -16,12 +16,13 @@ PPCA 2021, final assignment, Distributed Hash Table (chord protocol)
 
 - [x] 基本的 Go 语法
 - [x] OOP 练习：LinkList
-- [ ] 读懂测试代码（道阻且长...）
+- [x] 读懂测试代码（道阻且长...）
 - [x] net 入门，实现简单多 server RPC
 - [x] DHT框架设计 （粗略√）
 - [x] debug.go & utils.go
-- [ ] node.go
-- [ ] rpc.go
+- [x] node.go
+- [x] rpc.go
+- [ ] ForceQuit
 
 
 
@@ -98,5 +99,9 @@ $$x \in (n, succ)$$
 - [x] 进程抢占？（好吧是我自己写错了）
 - [x] Quit 问题 （刷新 SuccList + finger 跳错特判）
 - [x] Round 2 failed？（data move deadlock）
-- [ ] too many files？
+- [x] too many files？（~~finger 表跳转过慢问题~~  client Close 问题）
+- [ ] 
 
+疑似死锁？
+
+![image-20210723121310067](C:\Users\17138\AppData\Roaming\Typora\typora-user-images\image-20210723121310067.png)

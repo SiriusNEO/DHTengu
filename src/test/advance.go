@@ -201,7 +201,7 @@ func quitAndStabilizeTest() (bool, int, int) {
 	for t := 1; t <= QASNodeSize; t++ {
 		/* Quit. */
 		idxInArray := rand.Intn(len(nodesInNetwork))
-
+		fmt.Println("Quit Num ", t)
 		nodes[nodesInNetwork[idxInArray]].Quit()
 		nodesInNetwork = removeFromArray(nodesInNetwork, idxInArray)
 
