@@ -14,11 +14,11 @@ const (
 
 	SuccListLen = 10
 
-	UpdateInterval = 25 * time.Millisecond
-	FixFingerInterval = 25 * time.Millisecond
+	UpdateInterval = 10 * time.Millisecond
+	FixFingerInterval = 10 * time.Millisecond
 
 	RemoteTryTime = 3
-	RemoteTryInterval = 50 * time.Millisecond
+	RemoteTryInterval = 20 * time.Millisecond
 )
 
 //can not declared as const
@@ -142,4 +142,17 @@ func (this *LockMap) Delete(key string) (founded bool) {
 	_, founded = this.hashMap[key]
 	delete(this.hashMap, key)
 	return founded
+}
+
+func (this *LockMap) Copy() map[string]string {
+	ret := make(map[string]string)
+
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
+	for key, value := range this.hashMap {
+		ret[key] = value
+	}
+
+	return ret
 }

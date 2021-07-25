@@ -213,6 +213,7 @@ func quitAndStabilizeTest() (bool, int, int) {
 			ok, res := nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get(key)
 			if !ok || res != value {
 				getInfo.fail()
+				fmt.Println("Failed. ", ok, res, value)
 			} else {
 				getInfo.success()
 			}

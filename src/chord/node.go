@@ -38,8 +38,8 @@ func NewNode(ip string) *NodeType{
 func (this *NodeType) Display() {
 	fmt.Println(" * Display *")
 	fmt.Println("ip: ", this.Addr.Ip, "id: ", this.Addr.Id, " Running: ", this.Running)
-	fmt.Println("data: ", this.data)
-	fmt.Println("backup: ", this.backup)
+	fmt.Println("data: ", this.data.hashMap)
+	fmt.Println("backup: ", this.backup.hashMap)
 	//fmt.Println("finger table: ", this.finger)
 	fmt.Println("predecessor: ", this.predecessor)
 	fmt.Println("succList: ", this.succList)
@@ -71,28 +71,13 @@ func (this *NodeType) findSuccessor(keyId *big.Int) AddrType {
 	}
 
 	cpn := this.closestPrecedingNode(keyId)
-	if cpn.Ip == this.Addr.Ip || cpn.Ip == "" {
+	if cpn.Ip == this.Addr.Ip || cpn.Ip == "" { //all finger failed
 		cpn = this.succList[0]
 	}
 
-	//cpn := this.succList[0]
-
 	client, err := Diag(cpn.Ip)
 	if err != nil {
-		/*Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : cpn.Ip,
-			"key" : keyId,
-		}).Error("Diag Failed. " + err.Error())*/
 		return AddrType{}
-	} else {
-		/*
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : cpn.Ip,
-			"key" : keyId,
-		}).Info("Diag Success. ")
-		*/
 	}
 	defer client.Close()
 	var ret AddrType
@@ -108,7 +93,6 @@ func (this *NodeType) closestPrecedingNode(keyId *big.Int) AddrType {
 	pingFailed := make(map[string]bool)
 
 	for i := M-1; i > 0; i-- {
-		// if finger[i] \in (n, Id)
 		if this.finger[i].Ip != "" && IsIn(&this.Addr.Id, keyId, &this.finger[i].Id, false, false) {
 			if pingFailed[this.finger[i].Ip] {
 				continue
@@ -117,10 +101,6 @@ func (this *NodeType) closestPrecedingNode(keyId *big.Int) AddrType {
 			if err == nil {
 				return this.finger[i]
 			} else {
-				Log.WithFields(logrus.Fields{
-					"from" : this.Addr.Ip,
-					"to" : this.finger[i].Ip,
-				}).Error("Ping Failed. " + err.Error())
 				pingFailed[this.finger[i].Ip] = true
 			}
 		}
@@ -128,7 +108,7 @@ func (this *NodeType) closestPrecedingNode(keyId *big.Int) AddrType {
 	return this.Addr
 }
 
-//Join , GuIde, Ip
+//Join  GuIde: sIp
 func (this *NodeType) Join(ip string) bool {
 	client, err := Diag(ip)
 	if err != nil {
@@ -141,51 +121,28 @@ func (this *NodeType) Join(ip string) bool {
 	err = client.Call("ReceiverType.FindSuccessor", &this.Addr.Id, &this.succList[0])
 	client.Close()
 
-	Log.WithFields(logrus.Fields{
-		"from" : this.Addr.Ip,
-		"to" : ip,
-	}).Info("Tracing1... Join")
-
 	client, err = Diag(this.succList[0].Ip)
 
 	if err != nil {
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : this.succList[0].Ip,
-		}).Error("Diag Failed. " + err.Error())
+		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : this.succList[0].Ip}).Error("Diag Failed. " + err.Error())
 		return false
 	}
 
 	var succData map[string]string
 	err = client.Call("ReceiverType.GetData", 0, &succData)
 
-	Log.WithFields(logrus.Fields{
-		"from" : this.Addr.Ip,
-		"to" : this.succList[0].Ip,
-	}).Info("Tracing2... Join")
-
 	if err != nil {
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : this.succList[0].Ip,
-		}).Error("Call Failed. " + err.Error())
+		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : this.succList[0].Ip}).Error("Call Failed. " + err.Error())
 		return false
 	}
 
 	for key := range succData {
 		keyID := Hash(key)
-		fmt.Println("Data Trans", keyID)
+//		fmt.Println("Data Trans", keyID)
 		if !IsIn(&this.Addr.Id, &this.succList[0].Id, &keyID, false, true) {
 			this.data.Store(key, succData[key])
 			var ret bool
 			err = client.Call("ReceiverType.DirectlyDelete", key, &ret)
-			if err != nil {
-				Log.WithFields(logrus.Fields{
-					"from" : this.Addr.Ip,
-					"to" : this.succList[0].Ip,
-				}).Error("Call Failed. " + err.Error())
-				return false
-			}
 		}
 	}
 
@@ -204,10 +161,7 @@ func (this *NodeType) Join(ip string) bool {
 	client, err = Diag(succPre.Ip)
 
 	if err != nil {
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : succPre.Ip,
-		}).Error("Diag Failed. " + err.Error())
+		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : succPre.Ip}).Error("Diag Failed. " + err.Error())
 		return false
 	}
 
@@ -221,18 +175,28 @@ func (this *NodeType) Join(ip string) bool {
 func (this *NodeType) Quit() {
 	client, err := Diag(this.predecessor.Ip)
 	if err != nil {
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : this.predecessor.Ip,
-		}).Error("Diag Failed. " + err.Error())
+		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : this.predecessor.Ip}).Error("Diag Failed. " + err.Error())
 	} else {
 		err = client.Call("ReceiverType.SuccListUpdate", &this.succList[SuccListLen-1], nil)
+		if this.predecessor.Ip != this.Addr.Ip {
+			this.mux.Lock()
+			thisBackup := this.backup.Copy()
+			this.mux.Unlock()
+
+			for key := range thisBackup {
+				var ret bool
+				err = client.Call("ReceiverType.BackupDirectlyPut", StrPair{key, thisBackup[key]}, &ret)
+			}
+		}
+
 		client.Close()
 	}
 
-	this.succListFlush()
+//	this.succListFlush()
 
-	client, err = Diag(this.succList[0].Ip)
+	succNow := this.succList[0]
+
+	client, err = Diag(succNow.Ip)
 	if err != nil {
 		/*Log.WithFields(logrus.Fields{
 			"from" : this.Addr.Ip,
@@ -244,9 +208,15 @@ func (this *NodeType) Quit() {
 
 	err = client.Call("ReceiverType.PredecessorUpdate", &this.predecessor, nil)
 
-	for key := range this.data.hashMap {
-		var ret bool
-		client.Call("ReceiverType.DirectlyPut", StrPair{key, this.data.hashMap[key]}, &ret)
+	if this.Addr.Ip != succNow.Ip {
+		this.mux.Lock()
+		thisData := this.data.Copy()
+		this.mux.Unlock()
+
+		for key := range thisData {
+			var ret bool
+			client.Call("ReceiverType.DirectlyPut", StrPair{key, thisData[key]}, &ret)
+		}
 	}
 
 	this.data.Init() //clear
@@ -280,43 +250,28 @@ func (this *NodeType) succListUpdate(tail *AddrType) {
 func (this *NodeType) Put(key string, value string) bool {
 	keyId := Hash(key)
 
-	Log.WithFields(logrus.Fields{
-		"ip" : this.Addr.Ip,
-		"id" : this.Addr.Id,
-		"key" : keyId,
-	}).Info("Put Tracing...")
+//	Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip,"id" : this.Addr.Id,"key" : keyId}).Info("Put Tracing...")
 
 	if IsIn(&this.predecessor.Id, &this.Addr.Id, &keyId, false, true) {
 		founded, dat := this.data.Load(key)
 		if founded {
-			Log.WithFields(logrus.Fields{
-				"ip" : this.Addr.Ip,
-				"key" : keyId,
-				"value" : value,
-				"dat" : dat,
-			}).Error("Put Failed. ")
+			Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip, "key" : keyId, "value" : value, "dat" : dat}).Error("Put Failed. ")
 			return false
 		}
 		this.data.Store(key, value)
 		client, err := Diag(this.predecessor.Ip)
-		defer client.Close()
 
 		if err != nil {
-			Log.WithFields(logrus.Fields{
-				"from" : this.Addr.Ip,
-				"to" : this.predecessor.Ip,
-			}).Error("Diag Failed. " + err.Error())
+			Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : this.predecessor.Ip}).Error("Diag Failed. " + err.Error())
 			return true
 		}
+
+		defer client.Close()
 
 		var ret bool
 		client.Call("ReceiverType.BackupDirectlyPut", StrPair{key, value}, &ret)
 
-		Log.WithFields(logrus.Fields{
-			"ip" : this.Addr.Ip,
-			"key" : keyId,
-			"value" : value,
-		}).Info("Put Success. ")
+//		Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip, "key" : keyId, "value" : value,}).Info("Put Success. ")
 		return true
 	}
 
@@ -324,10 +279,7 @@ func (this *NodeType) Put(key string, value string) bool {
 	client, err := Diag(tar.Ip)
 
 	if err != nil {
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : tar.Ip,
-		}).Error("Diag Failed. " + err.Error())
+		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : tar.Ip}).Error("Diag Failed. " + err.Error())
 		return false
 	}
 	defer client.Close()
@@ -336,10 +288,7 @@ func (this *NodeType) Put(key string, value string) bool {
 	err = client.Call("ReceiverType.Put", StrPair{key, value}, &ret)
 
 	if err != nil {
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : tar.Ip,
-		}).Error("Call Failed. " + err.Error())
+		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : tar.Ip}).Error("Call Failed. " + err.Error())
 		return false
 	}
 
@@ -351,11 +300,7 @@ func (this *NodeType) Get(key string) (founded bool, value string) {
 
 	keyId := Hash(key)
 
-	Log.WithFields(logrus.Fields{
-		"ip" : this.Addr.Ip,
-		"id" : this.Addr.Id,
-		"key" : keyId,
-	}).Info("Get Tracing...")
+//  Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip, "id" : this.Addr.Id, "key" : keyId}).Info("Get Tracing...")
 
 	if IsIn(&this.predecessor.Id, &this.Addr.Id, &keyId, false, true) {
 		return this.data.Load(key)
@@ -385,15 +330,13 @@ func (this *NodeType) Delete(key string) bool {
 	if IsIn(&this.predecessor.Id, &this.Addr.Id, &keyId, false, true) {
 		this.succListFlush()
 		client, err := Diag(this.predecessor.Ip)
-		defer client.Close()
 
 		if err != nil {
-			Log.WithFields(logrus.Fields{
-				"from" : this.Addr.Ip,
-				"to" : this.predecessor.Ip,
-			}).Error("Diag Failed. " + err.Error())
+			Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : this.predecessor.Ip}).Error("Diag Failed. " + err.Error())
 			return true
 		}
+
+		defer client.Close()
 
 		var ret bool
 		client.Call("ReceiverType.BackupDirectlyDelete", key, &ret)
@@ -403,16 +346,11 @@ func (this *NodeType) Delete(key string) bool {
 
 	tar := this.findSuccessor(&keyId)
 	client, err := Diag(tar.Ip)
-	defer client.Close()
-
 	if err != nil {
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : tar.Ip,
-		}).Error("Diag Failed. " + err.Error())
+		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : tar.Ip}).Error("Diag Failed. " + err.Error())
 		return false
 	}
-
+	defer client.Close()
 	var ret bool
 	err = client.Call("ReceiverType.Delete", key, &ret)
 	return ret
@@ -433,16 +371,12 @@ func (this *NodeType) checkPredecessor()  {
 	defer this.mux.Unlock()
 	err := Ping(this.predecessor.Ip)
 	if err != nil {
-		/*
-		Log.WithFields(logrus.Fields{
-			"from" : this.Addr.Ip,
-			"to" : this.predecessor.Ip,
-		}).Error("Ping Failed. " + err.Error())
-		*/
+//		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : this.predecessor.Ip}).Error("Ping Failed. " + err.Error())
 		this.predecessor = AddrType{"", *big.NewInt(0)}
 	}
 }
 
+//Flush succList, move data if necessary
 func (this *NodeType) succListFlush() {
 	this.flushMux.Lock()
 	defer this.flushMux.Unlock()
@@ -457,23 +391,16 @@ func (this *NodeType) succListFlush() {
 		ping := Ping(succNow.Ip)
 		if ping != nil && succNow.Ip != "" && j < SuccListLen-1 {
 			flag = true
-			 Log.WithFields(logrus.Fields{
-				 "from": this.Addr.Ip,
-				 "to":   succNow.Ip,
-			 }).Info("UPD succ")
 		}
 		if ping == nil {
 			if flag {
 				client, err1 := Diag(succNow.Ip)
 
 				if err1 != nil {
-					Log.WithFields(logrus.Fields{
-						"from": this.Addr.Ip,
-						"to":   succNow.Ip,
-					}).Error("Diag Failed. " + err1.Error())
+					Log.WithFields(logrus.Fields{"from": this.Addr.Ip, "to":   succNow.Ip}).Error("Diag Failed. " + err1.Error())
 				} else {
 					this.mux.Lock()
-					thisBackup := this.backup.hashMap
+					thisBackup := this.backup.Copy()
 					this.mux.Unlock()
 
 					for key := range thisBackup {
@@ -541,14 +468,9 @@ func (this *NodeType) stabilize()  {
 
 	var empty int
 	err = client.Call("ReceiverType.Notify", &this.Addr, &empty)
-	/*
-	Log.WithFields(logrus.Fields{
-		"ip" : this.Addr.Ip,
-	}).Info("Stabilize Success. ")
-	*/
 }
 
-//notify this, check whether to modify the pre
+//Notify this node, check whether to modify the pre
 func (this *NodeType) notify(addr *AddrType) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
@@ -556,13 +478,9 @@ func (this *NodeType) notify(addr *AddrType) {
 	if this.predecessor.Ip == "" || IsIn(&this.predecessor.Id, &this.Addr.Id, &addr.Id, false, false) {
 		this.predecessor = *addr
 	}
-
-	/*Log.WithFields(logrus.Fields{
-		"ip" : this.Addr.Ip,
-	}).Info("Notify Success. ")*/
 }
 
-//fixPos is the index to fix, every time fixPos++ to fix the next pos
+//FixFingers fixPos is the index to fix, every time fixPos++ to fix the next pos
 func (this *NodeType) FixFingers()  {
 	fixPos := 0
 	for this.Running {
@@ -582,12 +500,6 @@ func (this *NodeType) FixFingers()  {
 			fixPos = 0
 		}
 
-		/*
-			Log.WithFields(logrus.Fields{
-				"ip" : this.Addr.Ip,
-				"fixpos" : *fixPos,
-			}).Info("Fix Finger Success")
-		*/
 		time.Sleep(FixFingerInterval)
 	}
 }

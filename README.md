@@ -4,11 +4,12 @@ PPCA 2021, final assignment, Distributed Hash Table (chord protocol)
 
 ### 简介
 
-饭纲丸龙，鸦天狗的首领，具有操纵星空程度的能力。
-
-大天狗身上承担着发展、维系天狗社会的义务。天狗社会每时每刻都在进行着纷繁的通信与调度，作为大天狗的它巧妙地利用分布式的原理去中心化。
-
-网络中的 Node，与天魔之山的星星有着不少相似之处呢。
+> 饭纲丸龙，鸦天狗的首领，具有操纵星空程度的能力。
+>
+> 大天狗身上承担着发展、维系天狗社会的义务。天狗社会每时每刻都在进行着纷繁的通信与调度，作为大天狗的它巧妙地利用分布式的原理去中心化。
+>
+> 网络中的 Node，与天魔之山的星星有着不少相似之处呢。
+>
 
 
 
@@ -22,7 +23,7 @@ PPCA 2021, final assignment, Distributed Hash Table (chord protocol)
 - [x] debug.go & utils.go
 - [x] node.go
 - [x] rpc.go
-- [ ] ForceQuit
+- [x] ForceQuit
 
 
 
@@ -100,8 +101,5 @@ $$x \in (n, succ)$$
 - [x] Quit 问题 （刷新 SuccList + finger 跳错特判）
 - [x] Round 2 failed？（data move deadlock）
 - [x] too many files？（~~finger 表跳转过慢问题~~  client Close 问题）
-- [ ] 
+- [x] 疑似死锁？（锁管理）
 
-疑似死锁？
-
-![image-20210723121310067](C:\Users\17138\AppData\Roaming\Typora\typora-user-images\image-20210723121310067.png)

@@ -106,29 +106,24 @@ func (this *ReceiverType) BackupDirectlyPut(args StrPair, reply *bool) error {
 
 func (this *ReceiverType) DirectlyDelete(args string, reply *bool) error {
 	*reply = this.Node.data.Delete(args)
-
 	return nil
 }
 
 func (this *ReceiverType) BackupDirectlyDelete(args string, reply *bool) error {
 	*reply = this.Node.backup.Delete(args)
-
 	return nil
 }
 
 func (this *ReceiverType) GetData(_ int, reply *map[string]string) error {
 	this.Node.mux.Lock()
 	defer this.Node.mux.Unlock()
-
 	*reply = this.Node.data.hashMap
-
 	return nil
 }
 
 func (this *ReceiverType) UpdateBackup(args map[string]string, reply *int) error {
 	this.Node.mux.Lock()
 	defer this.Node.mux.Unlock()
-
 	this.Node.backup.hashMap = args
 	return nil
 }
@@ -136,9 +131,6 @@ func (this *ReceiverType) UpdateBackup(args map[string]string, reply *int) error
 func (this *ReceiverType) PredecessorUpdate(args *AddrType, _ *int) error {
 	this.Node.mux.Lock()
 	defer this.Node.mux.Unlock()
-	Log.WithFields(logrus.Fields{
-		"ip" : this.Node.Addr.Ip,
-	}).Info("Tracing... pre upd")
 	this.Node.predecessor = *args
 	return nil
 }
