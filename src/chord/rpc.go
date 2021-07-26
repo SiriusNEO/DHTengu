@@ -117,7 +117,7 @@ func (this *ReceiverType) BackupDirectlyDelete(args string, reply *bool) error {
 func (this *ReceiverType) GetData(_ int, reply *map[string]string) error {
 	this.Node.mux.Lock()
 	defer this.Node.mux.Unlock()
-	*reply = this.Node.data.hashMap
+	*reply = this.Node.data.Copy()
 	return nil
 }
 
@@ -131,7 +131,11 @@ func (this *ReceiverType) UpdateBackup(args map[string]string, reply *int) error
 func (this *ReceiverType) PredecessorUpdate(args *AddrType, _ *int) error {
 	this.Node.mux.Lock()
 	defer this.Node.mux.Unlock()
+
+	Log.WithFields(logrus.Fields{"ip" : this.Node.Addr.Ip}).Info("Tracing... predecessor upd")
+
 	this.Node.predecessor = *args
+
 	return nil
 }
 

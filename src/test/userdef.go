@@ -62,7 +62,7 @@ func (this PubNodeType) Join(addr string) bool {
 }
 
 func (this PubNodeType) Quit() {
-	this.receiver.Node.ForceQuit()
+	this.receiver.Node.Quit()
 	this.receiver.Node.Running = false
 	err := this.receiver.Listener.Close()
 	if err == nil {

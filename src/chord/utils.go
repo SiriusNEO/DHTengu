@@ -14,11 +14,11 @@ const (
 
 	SuccListLen = 10
 
-	UpdateInterval = 10 * time.Millisecond
-	FixFingerInterval = 10 * time.Millisecond
+	UpdateInterval = 25 * time.Millisecond
+	FixFingerInterval = 25 * time.Millisecond
 
 	RemoteTryTime = 3
-	RemoteTryInterval = 20 * time.Millisecond
+	RemoteTryInterval = 25 * time.Millisecond
 )
 
 //can not declared as const

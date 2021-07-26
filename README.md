@@ -29,6 +29,8 @@ PPCA 2021, final assignment, Distributed Hash Table (chord protocol)
 
 ### Draft
 
+##### chord
+
 使用 log 做一套完备的debug输出
 
 ```go
@@ -38,8 +40,6 @@ chord
  - rcvr.go
  - debug.go
 ```
-
-
 
 靠谱的添加？并行更新
 
@@ -51,8 +51,6 @@ Fix_Fingers
 
 
 ```
-
-
 
 ```go
 type Node struct {
@@ -91,9 +89,24 @@ $$x \in (n, succ)$$
 
 
 
+##### app
 
 
-07 Quit 14 pre？
+
+- DHT
+
+
+
+```go
+FileSystem
+	utils.go //utils
+	bencode.go 
+	torrent.go //torrent-file related
+	p2p.go //upload & download
+	command.go //terminal command
+```
+
+
 
 ### Problem
 
@@ -102,4 +115,5 @@ $$x \in (n, succ)$$
 - [x] Round 2 failed？（data move deadlock）
 - [x] too many files？（~~finger 表跳转过慢问题~~  client Close 问题）
 - [x] 疑似死锁？（锁管理）
+- [x] Map 拷贝问题（统一采用 Copy）
 

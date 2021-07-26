@@ -72,7 +72,7 @@ func (this *NodeType) findSuccessor(keyId *big.Int) AddrType {
 
 	cpn := this.closestPrecedingNode(keyId)
 	if cpn.Ip == this.Addr.Ip || cpn.Ip == "" { //all finger failed
-		cpn = this.succList[0]
+		cpn = succ
 	}
 
 	client, err := Diag(cpn.Ip)
@@ -173,6 +173,8 @@ func (this *NodeType) Join(ip string) bool {
 
 //Quit tell pre and suc, move its data to succ
 func (this *NodeType) Quit() {
+	time.Sleep(UpdateInterval)
+
 	client, err := Diag(this.predecessor.Ip)
 	if err != nil {
 		Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : this.predecessor.Ip}).Error("Diag Failed. " + err.Error())
@@ -192,9 +194,9 @@ func (this *NodeType) Quit() {
 		client.Close()
 	}
 
-//	this.succListFlush()
-
+	this.mux.Lock()
 	succNow := this.succList[0]
+	this.mux.Unlock()
 
 	client, err = Diag(succNow.Ip)
 	if err != nil {
@@ -233,9 +235,7 @@ func (this *NodeType) succListUpdate(tail *AddrType) {
 	this.mux.Lock()
 	defer this.mux.Unlock()
 
-	Log.WithFields(logrus.Fields{
-		"ip" : this.Addr.Ip,
-	}).Info("Tracing... succListupd")
+//	Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip,}).Info("Tracing... succListupd")
 
 	for i := 1; i < SuccListLen; i++ {
 		this.succList[i-1] = this.succList[i]
@@ -243,7 +243,7 @@ func (this *NodeType) succListUpdate(tail *AddrType) {
 
 	this.succList[SuccListLen-1] = *tail
 
-	fmt.Println(this.succList)
+//	fmt.Println(this.succList)
 }
 
 //Put K-V Pair
