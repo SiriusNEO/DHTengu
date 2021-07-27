@@ -6,3 +6,7 @@
 /.git
 /main
 /test
+/torrent
+/download
+/client-test
+/upload

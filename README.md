@@ -100,7 +100,6 @@ $$x \in (n, succ)$$
 ```go
 FileSystem
 	utils.go //utils
-	bencode.go 
 	torrent.go //torrent-file related
 	p2p.go //upload & download
 	command.go //terminal command
