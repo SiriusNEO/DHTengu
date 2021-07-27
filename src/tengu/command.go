@@ -1,7 +1,9 @@
 package tengu
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/jackpal/bencode-go"
 	"os"
 	"time"
 )
@@ -23,62 +25,96 @@ func Welcome() {
 		hiBlue.Println("Tengu beta 1.0")
 		hiBlue.Println("Type \"help\" for more infomation.")
 
-		var cmd string
-		var arg1, arg2, arg3 string
-		fmt.Scanln(&cmd, &arg1, &arg2, &arg3)
+		var cmd, fp, sp, fn, sn, mg string
+		var args [3]string
+		fmt.Scanln(&cmd, &args[0], &args[1], &args[2])
+
+		for i := 0; i < 3; i++ {
+			if args[i] == "" {
+				continue
+			}
+			switch args[i][1:3] {
+				case "fp": fp = args[i][4:]
+				case "sp": sp = args[i][4:]
+				case "sn": sn = args[i][4:]
+				case "fn": fn = args[i][4:]
+				case "mg": mg = args[i][4:]
+			}
+		}
 
 		switch cmd {
 			case "help": {
 				yellow.Println("[Tengu Commands]")
-				yellow.Println("upload <file-path> <seed-path> <fileName>                #to upload a file")
-				yellow.Println("download <file-path> <seed-path> <seedFileName>          #to download a file")
-				yellow.Println("help                                                     #show help")
-				yellow.Println("quit                                                     #quit from tengu")
+				yellow.Println("upload -fp=<file-path> -sp=<seed-path> -fn=<fileName>                            #to upload a file")
+				yellow.Println("download -fp=<file-path> -sp=<seed-path> -sn=<seedFileName> -mg=<magnet>          #to download a file")
+				yellow.Println("help                                                                             #show help")
+				yellow.Println("quit                                                                             #quit from tengu")
 				yellow.Println("\n[Tengu Environment Setting]")
 				yellow.Println("Default Torrent Path: ", TorrentPath)
 				yellow.Println("Default Upload Path: ", UploadPath)
 				yellow.Println("Default Download Path: ", DownloadPath)
-				yellow.Println("\n[Tengu Hints]")
-				yellow.Println("<", DefaultSymbol ,"> represents default name & path")
 			}
 			case "quit": {
 				self.Quit()
 			}
 			case "upload": {
-				if arg1 == DefaultSymbol {
-					arg1 = UploadPath
+				if fp == "" {
+					fp = UploadPath
 				}
-				if arg2 == DefaultSymbol {
-					arg2 = TorrentPath
+				if sp == "" {
+					sp = TorrentPath
 				}
-				if arg3 == DefaultSymbol {
-					arg3 = "file"
+				if fn == "" {
+					fn = "file"
 				}
-				keyPackage, dataPackage := UploadFileProcessing(arg1 + arg3, arg3, arg2)
-				self.Upload(&keyPackage, &dataPackage)
-				yellow.Println("Finish Upload and create torrent to: ", arg2 + arg3 + ".torrent")
+				keyPackage, dataPackage, magnet, torrentStr := UploadFileProcessing(fp + fn, fn, sp)
+				ok := self.Upload(&keyPackage, &dataPackage)
+				if ok {
+					yellow.Println("Finish Upload and create torrent to: ", sp+fn+".torrent")
+					self.node.Put(magnet, torrentStr)
+					yellow.Println("Magnet URL: ", magnet, " saved to: ", sp+fn+"-magnet.txt")
+				}
 			}
 			case "download": {
-				if arg1 == DefaultSymbol {
-					arg1 = DownloadPath
+				if fp == "" {
+					fp = DownloadPath
 				}
-				if arg2 == DefaultSymbol {
-					arg2 = TorrentPath
+				if sp == "" {
+					sp = TorrentPath
 				}
-				if arg3 == DefaultSymbol {
-					arg3 = "file.torrent"
+				if sn == "" {
+					sn = "file.torrent"
 				}
-				keyPackage, fileName := DownloadFileProcessing(arg2 + arg3)
+				if mg != "" {
+					ok, torrentStr := self.node.Get(mg)
+					if ok {
+						reader := bytes.NewBufferString(torrentStr)
+						torrent := bencodeTorrent{}
+						err := bencode.Unmarshal(reader, &torrent)
+						if err != nil {
+							red.Println("Failed to analysis Magnet URL: torrent broken.")
+						} else {
+							torrent.Save(sp + sn)
+							green.Println("Magnet to Torrent Success! saved to: ", sp + sn)
+						}
+					} else {
+						red.Println("Failed to analysis Magnet URL: torrent not founded.")
+					}
+				}
+				keyPackage, fileName := DownloadFileProcessing(sp + sn)
 
-				fp, err := os.Create(arg1 + fileName)
+				fileIO, err := os.Create(fp + fileName)
 
 				if err != nil {
-					red.Println("File Path invalid in ", arg1)
+					red.Println("File Path invalid in ", fp)
 					continue
 				}
-				fp.Write(self.DownLoad(&keyPackage))
-				time.Sleep(DownloadWriteInterval)
-				yellow.Println("Finish Download to: ", arg1 + fileName)
+				ok, data := self.DownLoad(&keyPackage)
+				if ok {
+					fileIO.Write(data)
+					time.Sleep(DownloadWriteInterval)
+					yellow.Println("Finish Download to: ", fp+fileName)
+				}
 			}
 		}
 	}

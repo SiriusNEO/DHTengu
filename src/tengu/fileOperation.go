@@ -1,7 +1,9 @@
 package tengu
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/jackpal/bencode-go"
 	"io"
 	"os"
 )
@@ -29,7 +31,7 @@ func (this *KeyPackage) getKey(index int) string {
 	return fmt.Sprintf("%x", ret)
 }
 
-func UploadFileProcessing(filePath string, fileName string, seedPath string) (KeyPackage, DataPackage) {
+func UploadFileProcessing(filePath string, fileName string, seedPath string) (KeyPackage, DataPackage, string, string) {
 	dataPackage, length := makeDataPackage(filePath)
 
 	green.Println("Data Packaged Finish. Total Piece: ", dataPackage.size)
@@ -62,7 +64,18 @@ func UploadFileProcessing(filePath string, fileName string, seedPath string) (Ke
 	green.Println("Torrent Resolved Finish: ")
 	torrent.Info.Display()
 
-	return keyPackage, dataPackage
+	var magnet string
+	fileIO, err := os.Create(seedPath + fileName + "-magnet.txt")
+	if err != nil {
+		red.Println("Failed to Save Magnet URL.")
+	} else {
+		magnet = MakeMagnet(fmt.Sprintf("%x", keyPackage.infoHash))
+		fileIO.Write([]byte(magnet))
+	}
+	writer := bytes.NewBufferString("")
+	err = bencode.Marshal(writer, torrent)
+
+	return keyPackage, dataPackage, magnet, writer.String()
 }
 
 func DownloadFileProcessing(seedPath string) (KeyPackage, string) {
@@ -82,7 +95,7 @@ func DownloadFileProcessing(seedPath string) (KeyPackage, string) {
 }
 
 func makeDataPackage(path string) (DataPackage, int) {
-	fp, err := os.Open(path)
+	fileIO, err := os.Open(path)
 	length := 0
 	if err != nil {
 		red.Println("File Open Failed in path: ", path, err.Error())
@@ -93,7 +106,7 @@ func makeDataPackage(path string) (DataPackage, int) {
 
 	for {
 		buf := make([]byte, PieceSize)
-		bufSize, err := fp.Read(buf)
+		bufSize, err := fileIO.Read(buf)
 
 		if err != nil && err != io.EOF {
 			red.Println("File Read Error.")

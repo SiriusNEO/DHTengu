@@ -19,7 +19,6 @@ var (
 const (
 	 SHA1Len = 20
 	 SHA1StrLen = 40
-	 DefaultSymbol = "*"
 	 TorrentPath = "torrent/"
 	 UploadPath = "upload/"
 	 DownloadPath = "download/"
@@ -29,10 +28,19 @@ const (
 	 AfterLoginSleep = time.Second
 	 AfterQuitSleep = time.Second
 
-	 UploadInterval = 50 * time.Millisecond
-	 DownloadInterval = 50 * time.Millisecond
+	 UploadTimeout = time.Second
+	 DownloadTimeout = time.Second
+
+	 RetryTime = 2
+
+	 UploadInterval = 100 * time.Millisecond
+	 DownloadInterval = 100 * time.Millisecond
 	 DownloadWriteInterval = time.Second
 )
+
+func MakeMagnet(infoHash string) string {
+	return "magnet:?xt=urn:btih:" + infoHash
+}
 
 func GetLocalAddress() string {
 	var localaddress string

@@ -63,7 +63,7 @@ func PiecesHash(piece DataPiece, index int) ([SHA1Len]byte, error) {
 
 //Save writes a torrent file into target path
 func (this *bencodeTorrent) Save(path string) error {
-	fp, err := os.Create(path)
+	fileIO, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (this *bencodeTorrent) Save(path string) error {
 		Announce: "",
 		Info: this.Info,
 	}
-	err = bencode.Marshal(fp, torrent)
+	err = bencode.Marshal(fileIO, torrent)
 	if err != nil {
 		return err
 	}
