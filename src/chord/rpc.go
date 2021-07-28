@@ -33,11 +33,6 @@ func NewReceiver(ip string) *ReceiverType{
 	return ret
 }
 
-func (this *ReceiverType) Test(args int, reply *string) error {
-	*reply = this.Node.Addr.Ip
-	return nil
-}
-
 func (this ReceiverType) GetPredecessor(_ int, reply *AddrType) error {
 	this.Node.mux.Lock()
 	defer this.Node.mux.Unlock()
@@ -111,6 +106,36 @@ func (this *ReceiverType) DirectlyDelete(args string, reply *bool) error {
 
 func (this *ReceiverType) BackupDirectlyDelete(args string, reply *bool) error {
 	*reply = this.Node.backup.Delete(args)
+	return nil
+}
+
+func (this *ReceiverType) MergeIntoData(args map[string]string, _ *int) error {
+	this.Node.data.lock.Lock()
+	defer this.Node.data.lock.Unlock()
+
+	for key, value := range args {
+		this.Node.data.hashMap[key] = value
+	}
+
+	return nil
+}
+
+func (this *ReceiverType) MoveFromData(args []string, _ *int) error {
+	for _, key := range args {
+		this.Node.data.Delete(key)
+	}
+
+	return nil
+}
+
+func (this *ReceiverType) MergeIntoBackup(args map[string]string, _ *int) error {
+	this.Node.backup.lock.Lock()
+	defer this.Node.backup.lock.Unlock()
+
+	for key, value := range args {
+		this.Node.backup.hashMap[key] = value
+	}
+
 	return nil
 }
 

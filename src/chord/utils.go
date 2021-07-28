@@ -3,9 +3,9 @@ package chord
 import (
 	"crypto/sha1"
 	"errors"
+	"github.com/sasha-s/go-deadlock"
 	"math/big"
 	"net/rpc"
-	"sync"
 	"time"
 )
 
@@ -116,7 +116,7 @@ func Ping(addr string) error {
 
 type LockMap struct {
 	hashMap     map[string]string
-	lock     sync.RWMutex
+	lock     	deadlock.RWMutex
 }
 
 func (this *LockMap) Init() {

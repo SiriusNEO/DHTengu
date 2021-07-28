@@ -12,7 +12,7 @@ import (
 
 func NewNode(port int) dhtNode {
 	// Todo: create a node and then return it.
-	ret := NewPubNode("localhost:" + strconv.Itoa(port))
+	ret := NewPubNode(":" + strconv.Itoa(port))
 	return ret
 }
 
@@ -44,7 +44,6 @@ func (this *PubNodeType) Run() {
 	}
 	this.receiver.Node.Running = true
 	go this.receiver.Node.Updating()
-	go this.receiver.Node.FixFingers()
 
 	chord.Log.WithFields(logrus.Fields{
 		"addr" : this.receiver.Node.Addr,

@@ -2,9 +2,9 @@ package chord
 
 import (
 	"fmt"
+	"github.com/sasha-s/go-deadlock"
 	"github.com/sirupsen/logrus"
 	"math/big"
-	"sync"
 	"time"
 )
 
@@ -20,8 +20,8 @@ type NodeType struct {
 	predecessor  AddrType
 	succList     SuccListType
 
-	mux           sync.Mutex
-	flushMux      sync.Mutex
+	mux           deadlock.Mutex
+	flushMux      deadlock.Mutex
 }
 
 func NewNode(ip string) *NodeType{
@@ -136,15 +136,17 @@ func (this *NodeType) Join(ip string) bool {
 		return false
 	}
 
+	var deleteList []string
+
 	for key := range succData {
 		keyID := Hash(key)
-//		fmt.Println("Data Trans", keyID)
 		if !IsIn(&this.Addr.Id, &this.succList[0].Id, &keyID, false, true) {
 			this.data.Store(key, succData[key])
-			var ret bool
-			err = client.Call("ReceiverType.DirectlyDelete", key, &ret)
+			deleteList = append(deleteList, key)
 		}
 	}
+
+	client.Call("ReceiverType.MoveFromData", deleteList, nil)
 
 	this.backup.lock.Lock()
 	client.Call("ReceiverType.GetData", 0, &this.backup.hashMap)
@@ -185,14 +187,13 @@ func (this *NodeType) Quit() {
 			thisBackup := this.backup.Copy()
 			this.mux.Unlock()
 
-			for key := range thisBackup {
-				var ret bool
-				err = client.Call("ReceiverType.BackupDirectlyPut", StrPair{key, thisBackup[key]}, &ret)
-			}
+			client.Call("ReceiverType.MergeIntoBackup", thisBackup, nil)
 		}
 
 		client.Close()
 	}
+
+	this.succListFlush()
 
 	this.mux.Lock()
 	succNow := this.succList[0]
@@ -215,10 +216,7 @@ func (this *NodeType) Quit() {
 		thisData := this.data.Copy()
 		this.mux.Unlock()
 
-		for key := range thisData {
-			var ret bool
-			client.Call("ReceiverType.DirectlyPut", StrPair{key, thisData[key]}, &ret)
-		}
+		client.Call("ReceiverType.MergeIntoData", thisData, nil)
 	}
 
 	this.data.Init() //clear
@@ -358,8 +356,10 @@ func (this *NodeType) Delete(key string) bool {
 
 //Updating 3 stages, When a Node is Running, it will Updating its data
 func (this *NodeType) Updating() {
+	next := 0
 	for this.Running {
 		this.checkPredecessor()
+		this.FixFingers(&next)
 		this.stabilize()
 		time.Sleep(UpdateInterval)
 	}
@@ -403,10 +403,8 @@ func (this *NodeType) succListFlush() {
 					thisBackup := this.backup.Copy()
 					this.mux.Unlock()
 
-					for key := range thisBackup {
-						var ret bool
-						client.Call("ReceiverType.DirectlyPut", StrPair{key, thisBackup[key]}, &ret)
-					}
+					client.Call("ReceiverType.MergeIntoData", thisBackup, nil)
+
 					var tempBackup map[string]string
 					client.Call("ReceiverType.GetData", 0, &tempBackup)
 
@@ -481,25 +479,22 @@ func (this *NodeType) notify(addr *AddrType) {
 }
 
 //FixFingers fixPos is the index to fix, every time fixPos++ to fix the next pos
-func (this *NodeType) FixFingers()  {
-	fixPos := 0
-	for this.Running {
-		var tar big.Int
+func (this *NodeType) FixFingers(fixPos *int)  {
+	var tar big.Int
 
-		tar.Add(&this.Addr.Id, big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(fixPos)), Mod))
-		tar.Mod(&tar, Mod)
+	tar.Add(&this.Addr.Id, big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(*fixPos)), Mod))
+	tar.Mod(&tar, Mod)
 
-		fixFinger := this.findSuccessor(&tar)
+	fixFinger := this.findSuccessor(&tar)
 
-		this.mux.Lock()
-		this.finger[fixPos] = fixFinger
-		this.mux.Unlock()
+	this.mux.Lock()
+	this.finger[*fixPos] = fixFinger
+	this.mux.Unlock()
 
-		fixPos++
-		if fixPos >= M {
-			fixPos = 0
-		}
-
-		time.Sleep(FixFingerInterval)
+	*fixPos++
+	if *fixPos >= M {
+		*fixPos = 0
 	}
+
+	time.Sleep(FixFingerInterval)
 }
