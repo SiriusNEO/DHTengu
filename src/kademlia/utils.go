@@ -1,4 +1,4 @@
-package chord
+package kadmelia
 
 import (
 	"crypto/sha1"
@@ -52,25 +52,19 @@ func Hash(str string) big.Int{
 	return ret
 }
 
-//val in [ll, rr], if ll >= rr, rr += Mod
+//dis(a, b) = a xor b
 
-func IsIn(ll *big.Int, rr *big.Int, val *big.Int, lClosed bool, rClosed bool) bool {
-	var l big.Int
-	l.Add(ll, big.NewInt(0))
-	var r big.Int
-	if ll.Cmp(rr) >= 0 {r.Add(rr, Mod)} else {r.Add(rr, big.NewInt(0))}
-	lCmp := -1
-	rCmp := 1
-	if lClosed {lCmp = 0}
-	if rClosed {rCmp = 0}
+func dis(obj1 *big.Int, obj2 *big.Int) big.Int {
+	var ret big.Int
+	ret.Xor(obj1, obj2)
+	return ret
+}
 
-	if l.Cmp(val) <= lCmp && r.Cmp(val) >= rCmp {
-		return true
-	}
+//common prefix length between two ID
 
-	var val1 big.Int
-	val1.Add(val, Mod)
-	return l.Cmp(&val1) <= lCmp && r.Cmp(&val1) >= rCmp
+func cpl(obj1 *big.Int, obj2 *big.Int) int {
+	xorDis := dis(obj1, obj2)
+	return xorDis.BitLen() - 1
 }
 
 //RPC Service: Diag, Ping
@@ -140,6 +134,8 @@ func (this *LockMap) Delete(key string) (founded bool) {
 	delete(this.hashMap, key)
 	return founded
 }
+
+//deep copy
 
 func (this *LockMap) Copy() map[string]string {
 	ret := make(map[string]string)

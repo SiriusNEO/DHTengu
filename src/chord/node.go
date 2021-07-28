@@ -175,7 +175,6 @@ func (this *NodeType) Join(ip string) bool {
 
 //Quit tell pre and suc, move its data to succ
 func (this *NodeType) Quit() {
-	time.Sleep(UpdateInterval)
 
 	client, err := Diag(this.predecessor.Ip)
 	if err != nil {
@@ -302,6 +301,12 @@ func (this *NodeType) Get(key string) (founded bool, value string) {
 
 	if IsIn(&this.predecessor.Id, &this.Addr.Id, &keyId, false, true) {
 		return this.data.Load(key)
+	}
+
+	founded, value = this.data.Load(key)
+
+	if founded {
+		return
 	}
 
 	tar := this.findSuccessor(&keyId)
@@ -495,6 +500,4 @@ func (this *NodeType) FixFingers(fixPos *int)  {
 	if *fixPos >= M {
 		*fixPos = 0
 	}
-
-	time.Sleep(FixFingerInterval)
 }
