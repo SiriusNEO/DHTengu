@@ -1,4 +1,4 @@
-package kadmelia
+package kademlia
 
 import (
 	"github.com/sirupsen/logrus"
@@ -28,14 +28,21 @@ func NewReceiver(ip string) *ReceiverType{
 	return ret
 }
 
-func (this *ReceiverType) Store() error {
-
+func (this *ReceiverType) Store(args *StoreArg, _ *int) error {
+	this.Node.data.Store(args.Key, args.Value)
+	this.Node.kBucketUpdate(args.Sender)
+	return nil
 }
 
-func (this *ReceiverType) FindNode() error {
-
+func (this *ReceiverType) FindNode(args *FindNodeArg, reply *ClosestList) error {
+	*reply = this.Node.FindNode(&args.TarID)
+	this.Node.kBucketUpdate(args.Sender)
+	//fmt.Println(args.Sender.Ip, this.Node.Addr.Ip)
+	return nil
 }
 
-func (this *ReceiverType) FindValue() error {
-
+func (this *ReceiverType) FindValue(args *FindValueArg, reply *FindValueRet) error {
+	*reply = this.Node.FindValue(args.Key, &args.Hash)
+	this.Node.kBucketUpdate(args.Sender)
+	return nil
 }

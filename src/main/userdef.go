@@ -44,7 +44,6 @@ func (this *PubNodeType) Run() {
 	}
 	this.receiver.Node.Running = true
 	go this.receiver.Node.Updating()
-	go this.receiver.Node.FixFingers()
 
 	chord.Log.WithFields(logrus.Fields{
 		"addr" : this.receiver.Node.Addr,

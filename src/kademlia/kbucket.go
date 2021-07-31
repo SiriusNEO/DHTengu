@@ -1,18 +1,27 @@
-package kadmelia
+package kademlia
+
+import (
+	"github.com/sasha-s/go-deadlock"
+	"math/big"
+)
 
 type KBucketType struct {
 	size   		int
-	addr 		[K]AddrType
+	bucket 		[K]AddrType
+	mux         deadlock.Mutex
 }
 
 func (this *KBucketType) Update(addr AddrType) {
+	this.mux.Lock()
+	defer this.mux.Unlock()
+
 	if addr.Ip == "" {
 		return
 	}
 
 	founded := -1
 	for i := 0; i < this.size; i++ {
-		if this.addr[i].Ip == addr.Ip {
+		if this.bucket[i].Ip == addr.Ip {
 			founded = i
 			break
 		}
@@ -20,29 +29,97 @@ func (this *KBucketType) Update(addr AddrType) {
 
 	if founded == -1 {
 		if this.size < K {
-			this.addr[this.size] = addr
+			this.bucket[this.size] = addr
 			this.size++
 			return
 		} else {
-			if Ping(this.addr[0].Ip) != nil {
+			if Ping(this.bucket[0].Ip) != nil {
 				for i := 1; i < K; i++ {
-					this.addr[i-1] = this.addr[i]
+					this.bucket[i-1] = this.bucket[i]
 				}
-				this.addr[K-1] = addr
+				this.bucket[K-1] = addr
 				return
 			} else {
-				head := this.addr[0]
+				head := this.bucket[0]
 				for i := 1; i < K; i++ {
-					this.addr[i-1] = this.addr[i]
+					this.bucket[i-1] = this.bucket[i]
 				}
-				this.addr[K-1] = head
+				this.bucket[K-1] = head
 				return
 			}
 		}
 	} else {
 		for i := founded+1; i < this.size; i++ {
-			this.addr[i-1] = this.addr[i]
+			this.bucket[i-1] = this.bucket[i]
 		}
-		this.addr[this.size-1] = addr
+		this.bucket[this.size-1] = addr
 	}
+}
+
+type ClosestList struct {
+	Size     	int
+	Standard    big.Int
+	List	 	[K]AddrType
+}
+
+func (this *ClosestList) Insert(addr AddrType) (updated bool) { //promise in-order
+	updated = false
+
+	if Ping(addr.Ip) != nil {
+		return false
+	}
+
+	for i := 0; i < this.Size; i++ { //founded
+		if this.List[i].Ip == addr.Ip {
+			return false
+		}
+	}
+
+	newDis := dis(&addr.Id, &this.Standard)
+
+	if this.Size < K {
+		updated = true
+		for i := 0; i < this.Size; i++ {
+			nowDis := dis(&this.List[i].Id, &this.Standard)
+			if newDis.Cmp(&nowDis) < 0 {
+				for j := this.Size; j > i; j-- {
+					this.List[j] = this.List[j-1]
+				}
+				this.Size++
+				this.List[i] = addr
+				return
+			}
+		}
+		this.List[this.Size] = addr
+		this.Size++
+		return
+	}
+
+
+	for i := 0; i < K; i++ { //从小到大，找到第一个小的
+		nowDis := dis(&this.List[i].Id, &this.Standard)
+		if newDis.Cmp(&nowDis) < 0 {
+			updated = true
+			for j := K-1; j > i; j-- {
+				this.List[j] = this.List[j-1]
+			}
+			this.List[i] = addr
+			return
+		}
+	}
+
+	return
+}
+
+func (this *ClosestList) Remove(addr AddrType) bool {
+	for i := 0; i < this.Size; i++ {
+		if this.List[i].Ip == addr.Ip {
+			for j := i+1; j < this.Size; j++ {
+				this.List[j-1] = this.List[j]
+			}
+			this.Size--
+			return true
+		}
+	}
+	return false
 }

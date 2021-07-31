@@ -1,7 +1,6 @@
 package main
 
 import (
-	"chord"
 	"flag"
 	"math/rand"
 	"os"
@@ -19,8 +18,6 @@ func init() {
 
 	flag.Usage = usage
 	flag.Parse()
-
-	chord.LogInit()
 
 	if help || (testName != "basic" && testName != "advance" && testName != "all") {
 		flag.Usage()

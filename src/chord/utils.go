@@ -14,9 +14,9 @@ const (
 
 	SuccListLen = 10
 
-	UpdateInterval = 5 * time.Millisecond
+	UpdateInterval = 50 * time.Millisecond
 
-	RemoteTryTime = 1
+	RemoteTryTime = 3
 	RemoteTryInterval = 25 * time.Millisecond
 )
 

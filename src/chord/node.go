@@ -5,6 +5,7 @@ import (
 	"github.com/sasha-s/go-deadlock"
 	"github.com/sirupsen/logrus"
 	"math/big"
+	"runtime"
 	"time"
 )
 
@@ -48,6 +49,9 @@ func (this *NodeType) Display() {
 
 //Create the Network in NodeType: pre and suc <- self
 func (this *NodeType) Create() {
+	LogInit()
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	this.predecessor = this.Addr
 
 	for i := 0; i < SuccListLen; i++ {
@@ -301,12 +305,6 @@ func (this *NodeType) Get(key string) (founded bool, value string) {
 
 	if IsIn(&this.predecessor.Id, &this.Addr.Id, &keyId, false, true) {
 		return this.data.Load(key)
-	}
-
-	founded, value = this.data.Load(key)
-
-	if founded {
-		return
 	}
 
 	tar := this.findSuccessor(&keyId)

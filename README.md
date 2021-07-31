@@ -25,6 +25,11 @@ PPCA 2021, final assignment, Distributed Hash Table (chord protocol)
 - [x] rpc.go
 - [x] ForceQuit
 
+- [x] BT App
+- [x] Magnet Support & Test
+- [ ] Kademlia Learning
+- [ ] Kademlia Implement
+
 
 
 ### Draft
@@ -91,18 +96,40 @@ $$x \in (n, succ)$$
 
 ##### app
 
-
-
-- DHT
-
-
-
 ```go
 FileSystem
 	utils.go //utils
 	torrent.go //torrent-file related
-	p2p.go //upload & download
+	torrentClient.go //upload & download
+	fileOperation.go  //save & read to disk
 	command.go //terminal command
+```
+
+
+
+##### kademlia
+
+```go
+[RPC] FindNode() //在当前节点路由表中找最近K个节点（异或值小：近），除非路由表不满K个节点否则一定要找完
+[RPC] FindValue() //与FindNode一样，只不过如果这个点有存储该key值，返回value，否则找这个点的最近K个信息
+
+NodeLookup() //在整个网络中找离目标ID最近的K个节点
+//先找本节点最近K个，然后并发地（并发数α）向它们发送 FindNode
+//接受FindNode信息，再找K个距离最近的，发送FindNode
+//停止条件：本轮FindNode结果已经无法再更新任何节点，即节点已经最近
+
+Store(Key, Value) 
+//NodeLookup，找到K个
+//把数据保存在这K个（发送Store RPC）
+//RePublish?
+
+Find(Key)
+//类似NodeLookup，不过用FindValue代替FindNode
+
+Join(bootstrap)
+//bootstrap加入自己的桶
+//自己执行NodeLookup
+//刷新KBucket（?）
 ```
 
 

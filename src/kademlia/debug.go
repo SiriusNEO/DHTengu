@@ -1,4 +1,4 @@
-package kadmelia
+package kademlia
 
 import (
 	logrus "github.com/sirupsen/logrus"
