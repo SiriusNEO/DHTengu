@@ -1,145 +1,127 @@
-# Megumu - HashTable
-
-PPCA 2021, final assignment, Distributed Hash Table (chord protocol)
+# DHT & Tengu
 
 ### 简介
+
+PPCA 2021, final assignment, Distributed Hash Table (chord & kademlia protocol)
 
 > 饭纲丸龙，鸦天狗的首领，具有操纵星空程度的能力。
 >
 > 大天狗身上承担着发展、维系天狗社会的义务。天狗社会每时每刻都在进行着纷繁的通信与调度，作为大天狗的它巧妙地利用分布式的原理去中心化。
 >
 > 网络中的 Node，与天魔之山的星星有着不少相似之处呢。
->
 
 
 
-### TO DO
+### Requirements
 
-- [x] 基本的 Go 语法
-- [x] OOP 练习：LinkList
-- [x] 读懂测试代码（道阻且长...）
-- [x] net 入门，实现简单多 server RPC
-- [x] DHT框架设计 （粗略√）
-- [x] debug.go & utils.go
-- [x] node.go
-- [x] rpc.go
-- [x] ForceQuit
-
-- [x] BT App
-- [x] Magnet Support & Test
-- [ ] Kademlia Learning
-- [ ] Kademlia Implement
-
-
-
-### Draft
-
-##### chord
-
-使用 log 做一套完备的debug输出
-
-```go
-chord
- - utilities.go
- - node.go
- - rcvr.go
- - debug.go
-```
-
-靠谱的添加？并行更新
-
-```go
-Run: //单开线程执行
-CheckPredecessor
-Stabilization - Notify someone
-Fix_Fingers
-
+Chord & Kademlia 用到了如下第三方库
 
 ```
+github.com/sirupsen/logrus
+github.com/sasha-s/go-deadlock
+```
+
+Tengu App 在此基础上还用到了如下第三方库
+
+```
+github.com/jackpal/bencode-go
+github.com/faiface/beep
+github.com/nsf/termbox-go
+```
+
+此外，Tengu 的音乐播放功能需要声卡驱动支持
+
+```
+sudo apt install libasound2-dev
+```
+
+
+
+### Chord
+
+**文件结构**
 
 ```go
-type Node struct {
-    running //true or false
-    server
-    listener
-    data
-    backup //pre or suc?
-    finger
-    predecessor
-    succList
-    many mutex...
-    
+node.go //
+rpc.go //RPC Client & RPC Method 设计
+utils.go //相关常数的规定以及工具函数
+```
+
+**类型设计**
+
+```go
+type PubNodeType struct {
+    //实现 dhtNode interface
+	receiver	*ReceiverType
+}
+
+type ReceiverType struct {
+    //实现TCP通信，封装好的RPC客户端
+    Node      *NodeType
+	Server    *rpc.Server
+	Listener  net.Listener
+}
+
+type NodeType struct { //真正节点
+    ...
 }
 ```
 
+**关键部分算法**
 
-
-Running 是 RPC 层面的，Node 中只读不可写（读：for Running ...）
-
-
-
-开闭区间问题？
-
-chord ring 上 (key1, key2] 这一段是由 key2 对应的 Node 管的
-
-$$key \in (this, suc]$$
-
-closest_preceding_node 中，finger is the predecessor of id
-
-$$finger \in (n, id)$$
-
-stabilize 里，更新后继，x 和 succ 重复没意义（不一样才要更新）
-
-$$x \in (n, succ)$$
+- `FixFinger`：单开线程并行维护，每次修复一位，然后将位置加 1 准备对下个位置 Fix
+- `FindSuccessor`：按照论文编写，跳 Finger 表，且要求 Ping 的通，若 Finger 表全部失效则访问后继
+- `ForceQuit` 处理：每个节点备份自己**后继**的数据，同时维护后继列表，当维护后继列表过程中发现后继失效，将备份数据合并到后继列表第一个有效节点。
 
 
 
-##### app
+### Kademlia
+
+**文件结构**
 
 ```go
-FileSystem
-	utils.go //utils
-	torrent.go //torrent-file related
-	torrentClient.go //upload & download
-	fileOperation.go  //save & read to disk
-	command.go //terminal command
+dataType.go //实现带有有效时间的数据
+kBucket.go //实现K桶以及一个有序队列（用于K-Closest）
+node.go
+rpc.go
+utils.go
 ```
 
+**类型设计**
 
+同 Chord
 
-##### kademlia
+**关键部分算法**
 
-```go
-[RPC] FindNode() //在当前节点路由表中找最近K个节点（异或值小：近），除非路由表不满K个节点否则一定要找完
-[RPC] FindValue() //与FindNode一样，只不过如果这个点有存储该key值，返回value，否则找这个点的最近K个信息
-
-NodeLookup() //在整个网络中找离目标ID最近的K个节点
-//先找本节点最近K个，然后并发地（并发数α）向它们发送 FindNode
-//接受FindNode信息，再找K个距离最近的，发送FindNode
-//停止条件：本轮FindNode结果已经无法再更新任何节点，即节点已经最近
-
-Store(Key, Value) 
-//NodeLookup，找到K个
-//把数据保存在这K个（发送Store RPC）
-//RePublish?
-
-Find(Key)
-//类似NodeLookup，不过用FindValue代替FindNode
-
-Join(bootstrap)
-//bootstrap加入自己的桶
-//自己执行NodeLookup
-//刷新KBucket（?）
-```
+- `NodeLookUp` ：先自己进行一次 `FIND_NODE` 加入结果队列，之后每次选取结果队列中最近 K 个点发送 `FIND_NODE RPC`，直到结果队列不再能被更新。
+- `Get`：同 `NodeLookUp`，只是将 `FIND_NODE` 换成 `FIND_VALUE`（即找到立即停止）
+- `RePublish`：先遍历数据获取需要重新发布的键值对，对于每个键值对，以 `key` 为参数进行一次 `NodeLookUp`，然后对这 K 个点发送 `STORE RPC` 。
 
 
 
-### Problem
+### Tengu
 
-- [x] 进程抢占？（好吧是我自己写错了）
-- [x] Quit 问题 （刷新 SuccList + finger 跳错特判）
-- [x] Round 2 failed？（data move deadlock）
-- [x] too many files？（~~finger 表跳转过慢问题~~  client Close 问题）
-- [x] 疑似死锁？（锁管理）
-- [x] Map 拷贝问题（统一采用 Copy）
+Tengu 是一个支持本地进行小文件共享的P2P文件系统。
 
+此外，它还是一个简易的”共享歌单“，任何人都可以加入歌曲、播放歌单里的歌曲。
+
+如果您拥有 Tengu 的可执行文件包，执行 `./tengu` 来运行它，目前它还是一个命令行软件。
+
+目前支持的功能有：
+
+- 上传文件，生成 torrent 种子与磁力链接
+- 下载文件（使用种子或者磁力链接）
+- 上传歌曲（比起上传文件，这是特别为歌曲定制的入口，它能将你的歌曲加入某一专辑。当然，它完全包含了上传文件的内容）
+- 播放歌曲（播放歌曲先进行一个下载过程来获得歌曲临时文件，再调用 Tengu 的内置 Player 播放歌曲）
+
+
+
+### Reference
+
+[dht.pdf](./ref/dht.pdf) from [@xmhuangzhen](https://github.com/xmhuangzhen)
+
+[Chord: A Scalable Peer-to-peer Lookup Protocol for Internet Applications](./ref/paper-ton.pdf)
+
+[Kademlia: A Peer-to-Peer Information System Based on the XOR Metric  ](./ref/2002_Book_Peer-to-PeerSystems.pdf)
+
+[Building a BitTorrent client from the ground up in Go](https://blog.jse.li/posts/torrent/#putting-it-all-together)
