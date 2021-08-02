@@ -1,9 +1,10 @@
 package main
 
-import "tengu_kad"
+import "tengu"
 
 func main() {
 	tengu.Welcome()
+	//tengu.Play("music/Melty_Land_Nightmare.mp3", "MLN", "V")
 	/*fp, _ := os.Open("upload/Monet.pptx")
 
 	buf := make([]byte, 1048576)

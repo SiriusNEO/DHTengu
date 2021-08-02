@@ -15,6 +15,7 @@ func (this *Peer) Login(port int, bootstrapAddr string) {
 	os.Mkdir("upload", os.ModePerm)
 	os.Mkdir("download", os.ModePerm)
 	os.Mkdir("torrent", os.ModePerm)
+	os.Mkdir("music", os.ModePerm)
 
 	localAddress := GetLocalAddress()
 	this.addr = portToAddr(localAddress, port)
