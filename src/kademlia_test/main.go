@@ -33,14 +33,21 @@ func main() {
 	nodes[0].Create()
 	nodesInNetwork = append(nodesInNetwork, 0)
 
+	for i := 0; i < 7; i++ {
+		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(testKey[i], testVal[i]))
+		time.Sleep(time.Second)
+	}
+
 	for i := 1; i <= myselfTestNodeSize; i++ {
-		fmt.Println("Join Round ", i)
 		addr := nodeAddresses[nodesInNetwork[rand.Intn(len(nodesInNetwork))]]
+		fmt.Println("Join Round ", i, " guided by ", addr)
 		fmt.Println(nodes[i].Join(addr))
 		nodesInNetwork = append(nodesInNetwork, i)
 		fmt.Println("Join Finish ", i)
 		time.Sleep(time.Second)
 	}
+
+	time.Sleep(60 * time.Second)
 
 	time.Sleep(time.Second)
 	for i := 0; i <= myselfTestNodeSize; i++ {
@@ -48,15 +55,17 @@ func main() {
 	}
 
 	for i := 0; i < 7; i++ {
-		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(testKey[i], testVal[i]))
-		time.Sleep(time.Second)
-	}
-
-
-	for i := 0; i < 7; i++ {
 		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get(testKey[i]))
 		time.Sleep(time.Second)
 	}
+
+	/*time.Sleep(240 * time.Second)
+
+	for i := 0; i <= myselfTestNodeSize; i++ {
+		nodes[i].receiver.Node.Display()
+	}
+
+	return*/
 
 	for i := 0; i <= kvPairSize; i++ {
 		fmt.Println("Put ", i)
@@ -79,7 +88,7 @@ func main() {
 		fmt.Println(nodes[nodesInNetwork[rand.Intn(10)]].Get(strconv.Itoa(i)))
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(180 * time.Second)
 
 	for i := 0; i <= myselfTestNodeSize; i++ {
 		nodes[i].receiver.Node.Display()

@@ -19,6 +19,7 @@ func (this *Peer) Login(port int, bootstrapAddr string) {
 	localAddress := GetLocalAddress()
 	this.addr = portToAddr(localAddress, port)
 	this.node = NewNode(port)
+	go this.node.Run()
 	if bootstrapAddr == "" {
 		this.node.Create()
 		green.Println("Finish Create the network.")
@@ -31,7 +32,6 @@ func (this *Peer) Login(port int, bootstrapAddr string) {
 			return
 		}
 	}
-	go this.node.Run()
 	green.Println("Client Login Success in port: ", port)
 }
 

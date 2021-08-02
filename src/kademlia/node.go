@@ -61,7 +61,7 @@ func (this *NodeType) FindValue(key string, hash *big.Int) FindValueRet {
 	founded, value := this.data.Load(key)
 
 	if founded {
-		fmt.Println("hit!")
+		//fmt.Println("hit!")
 		return FindValueRet{ClosestList{}, value}
 	}
 
@@ -238,11 +238,13 @@ func (this *NodeType) RePublish() {
 		for _, key := range republishList {
 			this.Put(key, thisData[key]) //RePublish To Closest Nodes.
 		}
-		fmt.Println("RePublish Time: ", time.Now().Sub(sta))
+		if false {
+			fmt.Println("RePublish Time: ", time.Now().Sub(sta))
+		}
 
 		this.data.Expire()
 
-		time.Sleep(RePublishInterval) //1 Second -> 1 Hour
+		time.Sleep(RePublishInterval)
 	}
 }
 

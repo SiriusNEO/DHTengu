@@ -9,8 +9,8 @@ import (
 //kademlia DataType, a LockMap with validTime
 
 const (
-	NeedRePublishTime = 120 * time.Second
-	ExpiredTime = 600 * time.Second
+	NeedRePublishTime = 20 * time.Second
+	ExpiredTime = 120 * time.Second
 )
 
 type DataType struct {
@@ -53,6 +53,7 @@ func (this *DataType) Expire() {
 		fmt.Println("Data Expired: ", key, this.hashMap[key])
 		delete(this.hashMap, key)
 		delete(this.validTime, key)
+		delete(this.republishTime, key)
 	}
 	this.lock.Unlock()
 }
@@ -79,6 +80,8 @@ func (this *DataType) Delete(key string) (founded bool) {
 	defer this.lock.Unlock()
 	_, founded = this.hashMap[key]
 	delete(this.hashMap, key)
+	delete(this.validTime, key)
+	delete(this.republishTime, key)
 	return founded
 }
 

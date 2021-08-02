@@ -1,6 +1,6 @@
 package main
 
-import "tengu"
+import "tengu_kad"
 
 func main() {
 	tengu.Welcome()

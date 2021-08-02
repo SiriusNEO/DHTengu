@@ -18,7 +18,7 @@ const (
 	RemoteTryTime = 3
 	RemoteTryInterval = 25 * time.Millisecond
 
-	RePublishInterval = time.Second
+	RePublishInterval = 100 * time.Millisecond
 )
 
 //can not declared as const
