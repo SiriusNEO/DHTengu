@@ -25,15 +25,11 @@ func basicTest() (bool, int, int) {
 	wg = new(sync.WaitGroup)
 	for i := 0; i <= basicTestNodeSize; i++ {
 		nodes[i] = NewNode(firstPort + i)
-		fmt.Println(i)
 		nodeAddresses[i] = portToAddr(localAddress, firstPort+i)
-		fmt.Println(i)
+
 		wg.Add(1)
-		fmt.Println(i)
 		go nodes[i].Run()
 	}
-
-	fmt.Println("After Run")
 
 	nodesInNetwork := make([]int, 0, basicTestNodeSize+1)
 
@@ -63,7 +59,7 @@ func basicTest() (bool, int, int) {
 				joinInfo.success()
 			}
 			nodesInNetwork = append(nodesInNetwork, nextJoinNode)
-			fmt.Println("Join Node", j)
+
 			time.Sleep(basicTestJoinQuitSleepTime)
 			nextJoinNode++
 		}

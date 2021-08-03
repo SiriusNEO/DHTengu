@@ -8,7 +8,9 @@ import (
 var Log = logrus.New()
 
 func LogInit()  {
-	Log.SetOutput(os.Stdout)
+	log, _ := os.Create("log.txt")
+	Log.SetOutput(log)
+	//Log.SetOutput(os.Stdout)
 	Log.SetReportCaller(true)
 	Log.Formatter = &logrus.TextFormatter{
 		ForceColors: true,

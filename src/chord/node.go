@@ -5,7 +5,6 @@ import (
 	"github.com/sasha-s/go-deadlock"
 	"github.com/sirupsen/logrus"
 	"math/big"
-	"runtime"
 	"time"
 )
 
@@ -49,8 +48,6 @@ func (this *NodeType) Display() {
 
 //Create the Network in NodeType: pre and suc <- self
 func (this *NodeType) Create() {
-	LogInit()
-	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	this.predecessor = this.Addr
 
@@ -112,7 +109,7 @@ func (this *NodeType) closestPrecedingNode(keyId *big.Int) AddrType {
 	return this.Addr
 }
 
-//Join  GuIde: sIp
+//Join  Guide: ip
 func (this *NodeType) Join(ip string) bool {
 	client, err := Diag(ip)
 	if err != nil {

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"chord"
 	"flag"
 	"math/rand"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -25,6 +27,9 @@ func init() {
 	}
 
 	rand.Seed(time.Now().UnixNano())
+
+	chord.LogInit()
+	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
 func main() {

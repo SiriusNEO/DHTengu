@@ -4,6 +4,8 @@
 
 PPCA 2021, final assignment, Distributed Hash Table (chord & kademlia protocol)
 
+and its application, Tengu 
+
 > 饭纲丸龙，鸦天狗的首领，具有操纵星空程度的能力。
 >
 > 大天狗身上承担着发展、维系天狗社会的义务。天狗社会每时每刻都在进行着纷繁的通信与调度，作为大天狗的它巧妙地利用分布式的原理去中心化。
@@ -33,6 +35,24 @@ github.com/nsf/termbox-go
 
 ```
 sudo apt install libasound2-dev
+```
+
+
+
+### DHT Interface
+
+```go
+NewNode(port int) dhtNode
+
+Run()
+Create()
+Join(addr string) bool
+Quit()
+ForceQuit()
+Ping(addr string) bool
+Put(key string, value string) bool
+Get(key string) (bool, string)
+Delete(key string) bool  //Kademlia 不实现此方法
 ```
 
 
@@ -95,7 +115,7 @@ utils.go
 
 - `NodeLookUp` ：先自己进行一次 `FIND_NODE` 加入结果队列，之后每次选取结果队列中最近 K 个点发送 `FIND_NODE RPC`，直到结果队列不再能被更新。
 - `Get`：同 `NodeLookUp`，只是将 `FIND_NODE` 换成 `FIND_VALUE`（即找到立即停止）
-- `RePublish`：先遍历数据获取需要重新发布的键值对，对于每个键值对，以 `key` 为参数进行一次 `NodeLookUp`，然后对这 K 个点发送 `STORE RPC` 。
+- `RePublish`：先遍历数据获取需要重新发布的键值对，对于每个键值对，以 `key` 为参数进行一次 `NodeLookUp`，然后对这 K 个点发送 `STORE RPC` 。优化：在一个点接收到 `STORE RPC` 后，说明另外 K-1 个点也会收到，因此记录下该键值，下一周期不再重布。
 
 
 
@@ -120,8 +140,15 @@ Tengu 是一个支持本地进行小文件共享的P2P文件系统。
 
 [dht.pdf](./ref/dht.pdf) from [@xmhuangzhen](https://github.com/xmhuangzhen)
 
+[Golang Net](https://pkg.go.dev/net)
+
 [Chord: A Scalable Peer-to-peer Lookup Protocol for Internet Applications](./ref/paper-ton.pdf)
 
 [Kademlia: A Peer-to-Peer Information System Based on the XOR Metric  ](./ref/2002_Book_Peer-to-PeerSystems.pdf)
 
 [Building a BitTorrent client from the ground up in Go](https://blog.jse.li/posts/torrent/#putting-it-all-together)
+
+[Kademlia 算法学习](https://shuwoom.com/?p=813)
+
+
+
