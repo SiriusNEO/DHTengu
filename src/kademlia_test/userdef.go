@@ -95,6 +95,6 @@ func (this PubNodeType) Get(key string) (bool, string) {
 	return this.receiver.Node.Get(key)
 }
 
-/*func (this *PubNodeType) Delete(key string) bool {
-	return this.receiver.Node.Delete(key)
-}*/
+func (this *PubNodeType) Delete(key string) bool {
+	return true
+}

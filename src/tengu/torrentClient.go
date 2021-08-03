@@ -21,6 +21,7 @@ func (this *Peer) Login(port int, bootstrapAddr string) {
 	this.addr = portToAddr(localAddress, port)
 	this.node = NewNode(port)
 	go this.node.Run()
+
 	if bootstrapAddr == "" {
 		this.node.Create()
 		green.Println("Finish Create the network.")

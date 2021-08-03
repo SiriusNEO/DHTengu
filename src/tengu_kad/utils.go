@@ -14,14 +14,24 @@ var (
 	cyan   = color.New(color.FgCyan)
 	blue   = color.New(color.FgBlue)
 	hiBlue = color.New(color.FgHiBlue)
+	magenta = color.New(color.FgHiMagenta)
 )
 
 const (
 	 SHA1Len = 20
 	 SHA1StrLen = 40
-	 TorrentPath = "torrent/"
-	 UploadPath = "upload/"
-	 DownloadPath = "download/"
+
+	 DefaultTorrentPath = "torrent/"
+	 DefaultUploadPath = "upload/"
+	 DefaultDownloadPath = "download/"
+	 DefaultMusicPath = "music/"
+
+	 DefaultFileName = "file"
+	 DefaultMusicName = "music"
+	 DefaultAlbumName = "Default Album"
+
+	 SongDelim = '$'
+
 	 PieceSize = 1048576 //1MB
 	 WorkQueueBuffer = 1024
 
@@ -36,6 +46,7 @@ const (
 	 UploadInterval = 100 * time.Millisecond
 	 DownloadInterval = 100 * time.Millisecond
 	 DownloadWriteInterval = time.Second
+	 UploadFileInterval = time.Second
 )
 
 func MakeMagnet(infoHash string) string {

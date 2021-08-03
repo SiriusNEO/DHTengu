@@ -46,6 +46,7 @@ const (
 	 UploadInterval = 100 * time.Millisecond
 	 DownloadInterval = 100 * time.Millisecond
 	 DownloadWriteInterval = time.Second
+	 UploadFileInterval = time.Second
 )
 
 func MakeMagnet(infoHash string) string {

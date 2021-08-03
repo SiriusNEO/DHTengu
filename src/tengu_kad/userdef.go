@@ -1,7 +1,6 @@
 package tengu
 
 import (
-	"chord"
 	"github.com/sirupsen/logrus"
 	"kademlia"
 	"strconv"
@@ -13,7 +12,7 @@ import (
 
 func NewNode(port int) dhtNode {
 	// Todo: create a node and then return it.
-	ret := NewPubNode("localhost:" + strconv.Itoa(port))
+	ret := NewPubNode(":" + strconv.Itoa(port))
 	return ret
 }
 
@@ -40,13 +39,13 @@ func (this *PubNodeType) Run() {
 	err = this.receiver.Server.Register(this.receiver)
 
 	if err != nil {
-		chord.Log.WithFields(logrus.Fields{
+		kademlia.Log.WithFields(logrus.Fields{
 		}).Error("Register Error. " + err.Error())
 	}
 	this.receiver.Node.Running = true
 	go this.receiver.Node.RePublish()
 
-	chord.Log.WithFields(logrus.Fields{
+	kademlia.Log.WithFields(logrus.Fields{
 		"addr" : this.receiver.Node.Addr,
 	}).Info("Running Success!")
 
@@ -66,7 +65,7 @@ func (this PubNodeType) Quit() {
 	this.receiver.Node.Running = false
 	err := this.receiver.Listener.Close()
 	if err == nil {
-		chord.Log.WithFields(logrus.Fields{
+		kademlia.Log.WithFields(logrus.Fields{
 			"ip" : this.receiver.Node.Addr,
 		}).Info("Quit Success.")
 	}
@@ -77,14 +76,14 @@ func (this PubNodeType) ForceQuit() {
 	this.receiver.Node.Running = false
 	err := this.receiver.Listener.Close()
 	if err == nil {
-		chord.Log.WithFields(logrus.Fields{
+		kademlia.Log.WithFields(logrus.Fields{
 			"ip" : this.receiver.Node.Addr,
 		}).Info("Node Force Quit.")
 	}
 }
 
 func (this PubNodeType) Ping(addr string) bool {
-	err := chord.Ping(addr)
+	err := kademlia.Ping(addr)
 	return err == nil
 }
 
@@ -94,4 +93,8 @@ func (this PubNodeType) Put(key string, value string) bool {
 
 func (this PubNodeType) Get(key string) (bool, string) {
 	return this.receiver.Node.Get(key)
+}
+
+func (this *PubNodeType) Delete(key string) bool {
+	return true
 }

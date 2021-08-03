@@ -251,10 +251,10 @@ func (this *NodeType) Put(key string, value string) bool {
 //	Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip,"id" : this.Addr.Id,"key" : keyId}).Info("Put Tracing...")
 
 	if IsIn(&this.predecessor.Id, &this.Addr.Id, &keyId, false, true) {
-		founded, dat := this.data.Load(key)
+		founded, _ := this.data.Load(key)
 		if founded {
-			Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip, "key" : keyId, "value" : value, "dat" : dat}).Error("Put Failed. ")
-			return false
+			Log.WithFields(logrus.Fields{"ip" : this.Addr.Ip, "key" : keyId}).Info("Founded Duplicated.")
+			return true
 		}
 		this.data.Store(key, value)
 		client, err := Diag(this.predecessor.Ip)

@@ -2,9 +2,12 @@ package tengu
 
 import (
 	"bytes"
+	"chord"
 	"fmt"
 	"github.com/jackpal/bencode-go"
+	"math/rand"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -14,6 +17,11 @@ var bootstrapAddr string
 
 func Welcome() {
 	hiBlue.Println("Hello, this is Tengu, Welcome.")
+
+	//Init
+	chord.LogInit()
+	rand.Seed(time.Now().UnixNano())
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	hiBlue.Println("* Please Input your port and bootstrap address")
 	fmt.Scanln(&port, &bootstrapAddr)
@@ -47,18 +55,21 @@ func Welcome() {
 
 		switch cmd {
 			case "help": {
-				yellow.Println("[Tengu Commands]")
-				yellow.Println("upload -fp=<file-path> -sp=<seed-path> -fn=<fileName>                            #to upload a file")
-				yellow.Println("download -fp=<file-path> -sp=<seed-path> -sn=<seedFileName> -mg=<magnet>         #to download a file")
-				yellow.Println("music-upload -mp=<music-path> -sp=<seed-path> -so=<song-name> -al=<album>        #to upload a song")
-				yellow.Println("music-play -al=<album> -so=<song-name> -sp=<seed-path>                           #to play a song. You can neglect the argument to check the song list.")
-				yellow.Println("help                                                                             #show help")
-				yellow.Println("quit                                                                             #quit from tengu")
-				yellow.Println("\n[Tengu Environment Setting]")
-				yellow.Println("Default Torrent Path: ", DefaultTorrentPath)
-				yellow.Println("Default Upload Path: ", DefaultUploadPath)
-				yellow.Println("Default Download Path: ", DefaultDownloadPath)
-				yellow.Println("Default Music Path: ", DefaultMusicPath)
+				yellow.Println("Tengu is a File Sharing System based on DHT")
+				yellow.Println("\nTengu Commands:\n")
+				yellow.Println("	upload -fp=<file-path> -sp=<seed-path> -fn=<fileName>                            #to upload a file")
+				yellow.Println("	download -fp=<file-path> -sp=<seed-path> -sn=<seedFileName> -mg=<magnet>         #to download a file")
+				yellow.Println("	music-upload -mp=<music-path> -sp=<seed-path> -so=<song-name> -al=<album>        #to upload a song")
+				yellow.Println("	music-play -al=<album> -so=<song-name> -sp=<seed-path>                           #to play a song.")
+				yellow.Println("	help                                                                             #show help")
+				yellow.Println("	quit                                                                             #quit from tengu")
+				yellow.Println("\nTengu Environment Setting:\n")
+				yellow.Println("	Default Torrent Path: ", DefaultTorrentPath)
+				yellow.Println("	Default Upload Path: ", DefaultUploadPath)
+				yellow.Println("	Default Download Path: ", DefaultDownloadPath)
+				yellow.Println("	Default Music Path: ", DefaultMusicPath)
+				yellow.Println("\nHints:\n")
+				yellow.Println("	You can omit \"-fn\" \"-so\" arguments to upload the whole directory.")
 			}
 			case "quit": {
 				self.Quit()
@@ -70,15 +81,30 @@ func Welcome() {
 				if sp == "" {
 					sp = DefaultTorrentPath
 				}
+				var fileList []string
 				if fn == "" {
-					fn = DefaultFileName
+					dir, err := os.Open(fp)
+					if err != nil {
+						red.Println("Open File Directory Error!")
+					} else {
+						list, _ := dir.Readdir(-1)
+						for _, file := range list {
+							fileList = append(fileList, file.Name())
+						}
+					}
+				} else {
+					fileList = append(fileList, fn)
 				}
-				keyPackage, dataPackage, magnet, torrentStr := UploadFileProcessing(fp + fn, fn, sp)
-				ok := self.Upload(&keyPackage, &dataPackage)
-				if ok {
-					yellow.Println("Finish Upload and create torrent to: ", sp+fn+".torrent")
-					self.node.Put(magnet, torrentStr)
-					yellow.Println("Magnet URL: ", magnet, " saved to: ", sp+fn+"-magnet.txt")
+				for _, fileName := range fileList {
+					yellow.Println("\nStart Upload File: ", fileName)
+					keyPackage, dataPackage, magnet, torrentStr := UploadFileProcessing(fp+fileName, fileName, sp)
+					ok := self.Upload(&keyPackage, &dataPackage)
+					if ok {
+						yellow.Println("Finish Upload and create torrent to: ", sp+fileName+".torrent")
+						self.node.Put(magnet, torrentStr)
+						yellow.Println("Magnet URL: ", magnet, " saved to: ", sp+fileName+"-magnet.txt")
+					}
+					time.Sleep(UploadFileInterval)
 				}
 			}
 			case "download": {
@@ -129,28 +155,43 @@ func Welcome() {
 				if sp == "" {
 					sp = DefaultTorrentPath
 				}
+				var songList []string
 				if so == "" {
-					so = DefaultMusicName
+					dir, err := os.Open(mp)
+					if err != nil {
+						red.Println("Open Music Directory Error!")
+					} else {
+						list, _ := dir.Readdir(-1)
+						for _, musicFile := range list {
+							songList = append(songList, musicFile.Name())
+						}
+					}
+				} else {
+					songList = append(songList, so)
 				}
 				if al == "" {
 					al = DefaultAlbumName
 				}
-				keyPackage, dataPackage, magnet, torrentStr := UploadFileProcessing(mp + so, so, sp)
-				ok := self.Upload(&keyPackage, &dataPackage)
-				if ok {
-					yellow.Println("Finish Upload and create torrent to: ", sp + so +".torrent")
-					self.node.Put(magnet, torrentStr)
-					yellow.Println("Magnet URL: ", magnet, " saved to: ", sp + so + "-magnet.txt")
-					self.node.Put(al + "/" + so, torrentStr)
-					founded, listStr := self.node.Get(al)
-					if !founded {
-						magenta.Println("Create Album: ", al)
-						listStr = ""
+				for _, songName := range songList {
+					magenta.Println("\nStart Upload Song: ", songName)
+					keyPackage, dataPackage, magnet, torrentStr := UploadFileProcessing(mp+songName, songName, sp)
+					ok := self.Upload(&keyPackage, &dataPackage)
+					if ok {
+						yellow.Println("Finish Upload and create torrent to: ", sp+songName+".torrent")
+						self.node.Put(magnet, torrentStr)
+						yellow.Println("Magnet URL: ", magnet, " saved to: ", sp+songName+"-magnet.txt")
+						self.node.Put(al+"/"+songName, torrentStr)
+						founded, listStr := self.node.Get(al)
+						if !founded {
+							magenta.Println("Create Album: ", al)
+							listStr = ""
+						}
+						listStr += songName + string(SongDelim)
+						self.node.Delete(al)
+						self.node.Put(al, listStr)
+						magenta.Println("Song: ", songName, " has been collected to Album: ", al)
 					}
-					listStr += so + string(SongDelim)
-					self.node.Delete(al)
-					self.node.Put(al, listStr)
-					magenta.Println("Song: ", so, " has been collected to Album: ", al)
+					time.Sleep(UploadFileInterval)
 				}
 			}
 			case "music-play": {

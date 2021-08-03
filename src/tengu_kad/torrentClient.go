@@ -15,12 +15,13 @@ func (this *Peer) Login(port int, bootstrapAddr string) {
 	os.Mkdir("upload", os.ModePerm)
 	os.Mkdir("download", os.ModePerm)
 	os.Mkdir("torrent", os.ModePerm)
+	os.Mkdir("music", os.ModePerm)
 
-	//localAddress := GetLocalAddress()
-	localAddress := "localhost"
+	localAddress := GetLocalAddress()
 	this.addr = portToAddr(localAddress, port)
 	this.node = NewNode(port)
 	go this.node.Run()
+
 	if bootstrapAddr == "" {
 		this.node.Create()
 		green.Println("Finish Create the network.")
