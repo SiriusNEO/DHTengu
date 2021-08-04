@@ -37,6 +37,10 @@ github.com/nsf/termbox-go
 sudo apt install libasound2-dev
 ```
 
+Presentation 的 LaTeX 文件用到了 beamer 包的模板 [mtheme](https://github.com/matze/mtheme)，
+
+如果有编译的需要请保证正确配置了这个模板。
+
 
 
 ### DHT Interface

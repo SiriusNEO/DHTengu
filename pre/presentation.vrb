@@ -1,0 +1,9 @@
+\frametitle{可能遇到的问题}
+
+也许...
+^^I\begin{itemize}
+^^I^^I\item 某一客户端电源线被踢掉 (ForceQuit)
+^^I^^I\item 网络通信繁忙
+^^I^^I\item 恶意的网络攻击
+^^I\end{itemize}
+
