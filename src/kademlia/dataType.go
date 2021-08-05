@@ -9,8 +9,8 @@ import (
 //kademlia DataType, a LockMap with validTime
 
 const (
-	NeedRePublishTime = 20 * time.Second
-	ExpiredTime = 120 * time.Second
+	NeedRePublishTime = 120 * time.Second
+	ExpiredTime = 960 * time.Second
 )
 
 type DataType struct {

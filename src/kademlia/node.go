@@ -13,7 +13,7 @@ type NodeType struct {
 	Addr        	AddrType
 	routeTable		[M]KBucketType
 	data        	DataType
-	mux         	deadlock.Mutex
+	mux         	deadlock.RWMutex
 }
 
 func NewNode(ip string) *NodeType {
@@ -37,8 +37,8 @@ func (this *NodeType) Display() {
 }
 
 func (this *NodeType) FindNode(tarID *big.Int) (closestList ClosestList) {
-	this.mux.Lock()
-	defer this.mux.Unlock()
+	this.mux.RLock()
+	defer this.mux.RUnlock()
 
 	closestList.Standard = *tarID
 
@@ -55,8 +55,8 @@ func (this *NodeType) FindNode(tarID *big.Int) (closestList ClosestList) {
 
 //FindValue return value or K-closest nodes
 func (this *NodeType) FindValue(key string, hash *big.Int) FindValueRet {
-	this.mux.Lock()
-	defer this.mux.Unlock()
+	this.mux.RLock()
+	defer this.mux.RUnlock()
 
 	founded, value := this.data.Load(key)
 
@@ -92,6 +92,7 @@ func (this *NodeType) NodeLookup(tarID *big.Int) (closestList ClosestList) {
 			if diaged[closestList.List[i].Ip] == true {
 				continue
 			}
+			this.kBucketUpdate(closestList.List[i])
 			client, err := Diag(closestList.List[i].Ip)
 			diaged[closestList.List[i].Ip] = true
 			var ret ClosestList
@@ -133,6 +134,7 @@ func (this *NodeType) Get(key string) (founded bool, value string) {
 	for updated {
 		updated = false
 		var closestListTmp ClosestList
+		var removeList []AddrType
 		for i := 0; i < closestList.Size; i++ {
 			if diaged[closestList.List[i].Ip] == true {
 				continue
@@ -142,6 +144,7 @@ func (this *NodeType) Get(key string) (founded bool, value string) {
 			var ret FindValueRet
 			if err != nil {
 				Log.WithFields(logrus.Fields{"from" : this.Addr.Ip, "to" : closestList.List[i].Ip}).Error("Diag Failed. " + err.Error())
+				removeList = append(removeList, closestList.List[i])
 			} else {
 				err = client.Call("ReceiverType.FindValue", &FindValueArg{Key: key, Sender: this.Addr}, &ret)
 				if ret.Second != "" {
@@ -155,8 +158,24 @@ func (this *NodeType) Get(key string) (founded bool, value string) {
 			}
 		}
 
+		for _, key1 := range removeList {
+			closestList.Remove(key1)
+		}
+
 		for i := 0; i < closestListTmp.Size; i++ {
 			updated = updated || closestList.Insert(closestListTmp.List[i])
+		}
+	}
+
+	secondList := this.NodeLookup(&keyID)
+
+	for _, i := range secondList.List {
+		client, _ := Diag(i.Ip)
+		defer client.Close()
+		var ret FindValueRet
+		client.Call("ReceiverType.FindValue", &FindValueArg{Key: key, Sender: this.Addr}, &ret)
+		if ret.Second != "" {
+			return true, ret.Second
 		}
 	}
 
@@ -165,7 +184,11 @@ func (this *NodeType) Get(key string) (founded bool, value string) {
 
 func (this *NodeType) Put(key string, value string) bool {
 	keyID := Hash(key)
+
+	//sta := time.Now()
 	closestList := this.NodeLookup(&keyID)
+	//fmt.Println("Put Look-Up Time: ", time.Now().Sub(sta), key, value)
+
 	closestList.Insert(this.Addr) //robust: avoid 1-node can't find self
 	for i := 0; i < closestList.Size; i++ {
 		client, err := Diag(closestList.List[i].Ip)
@@ -228,6 +251,9 @@ func (this *NodeType) Quit() {
 
 func (this *NodeType) RePublish() {
 	for this.Running {
+		for i := 0; i < M; i++ {
+			this.routeTable[i].Reflesh()
+		}
 
 		this.mux.Lock()
 		thisData := this.data.Copy()

@@ -10,7 +10,7 @@ import (
 
 const (
 	M = 16
-	K = 6
+	K = 10
 	Alpha = 3
 
 	UpdateInterval = 25 * time.Millisecond

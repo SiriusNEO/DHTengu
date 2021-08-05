@@ -11,6 +11,18 @@ type KBucketType struct {
 	mux         deadlock.Mutex
 }
 
+func (this *KBucketType) Reflesh() {
+	for i := 0; i < this.size; i++ {
+		if Ping(this.bucket[i].Ip) != nil {
+			for j := i+1; j < this.size; j++ {
+				this.bucket[j-1] = this.bucket[j]
+			}
+			this.size--
+			return
+		}
+	}
+}
+
 func (this *KBucketType) Update(addr AddrType) {
 	this.mux.Lock()
 	defer this.mux.Unlock()

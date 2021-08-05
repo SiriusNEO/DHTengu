@@ -1,96 +1,67 @@
 package main
 
 import (
-	"fmt"
+	"flag"
+	"kademlia"
 	"math/rand"
-	"strconv"
+	"os"
+	"runtime"
 	"time"
 )
 
-const (
-	myselfTestNodeSize = 20
-	kvPairSize = 100
+var (
+	help     bool
+	testName string
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+
+	kademlia.LogInit()
+	runtime.GOMAXPROCS(runtime.NumCPU())
+}
+
 func main() {
-	testKey := [] string {"THU", "PKU", "FDU", "SJTU", "ZJU", "NJU", "USTC"}
-	testVal := [] string {"Beijing", "Beijing", "Shanghai", "Shanghai", "Zhejiang", "Nanjing", "Anhui"}
+	_, _ = yellow.Println("Welcome to DHT-2020 Test Program!\n")
 
-	firstPort := 20000
+	var basicFailRate float64
+	var forceQuitFailRate float64
+	var QASFailRate float64
 
-	nodes := new([myselfTestNodeSize + 1]PubNodeType)
-	nodeAddresses := new([myselfTestNodeSize + 1]string)
-	nodesInNetwork := make([]int, 0, myselfTestNodeSize+1)
-
-	for i := 0; i <= myselfTestNodeSize; i++ {
-		nodes[i] = *NewPubNode("localhost:" + strconv.Itoa(firstPort + i))
-		nodeAddresses[i] = "localhost:" + strconv.Itoa(firstPort + i)
-		go nodes[i].Run()
+	_, _ = yellow.Println("Basic Test Begins:")
+	basicPanicked, basicFailedCnt, basicTotalCnt := basicTest()
+	if basicPanicked {
+		_, _ = red.Printf("Basic Test Panicked.")
+		os.Exit(0)
 	}
 
-	time.Sleep(time.Second)
-
-	nodes[0].Create()
-	nodesInNetwork = append(nodesInNetwork, 0)
-
-	for i := 0; i < 7; i++ {
-		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(testKey[i], testVal[i]))
-		time.Sleep(time.Second)
+	basicFailRate = float64(basicFailedCnt) / float64(basicTotalCnt)
+	if basicFailRate > basicTestMaxFailRate {
+		_, _ = red.Printf("Basic test failed with fail rate %.4f\n", basicFailRate)
+	} else {
+		_, _ = green.Printf("Basic test passed with fail rate %.4f\n", basicFailRate)
 	}
 
-	for i := 1; i <= myselfTestNodeSize; i++ {
-		addr := nodeAddresses[nodesInNetwork[rand.Intn(len(nodesInNetwork))]]
-		fmt.Println("Join Round ", i, " guided by ", addr)
-		fmt.Println(nodes[i].Join(addr))
-		nodesInNetwork = append(nodesInNetwork, i)
-		fmt.Println("Join Finish ", i)
-		time.Sleep(time.Second)
+	time.Sleep(afterTestSleepTime)
+
+	_, _ = cyan.Println("\nFinal print:")
+	if basicFailRate > basicTestMaxFailRate {
+		_, _ = red.Printf("Basic test failed with fail rate %.4f\n", basicFailRate)
+	} else {
+		_, _ = green.Printf("Basic test passed with fail rate %.4f\n", basicFailRate)
 	}
-
-	time.Sleep(60 * time.Second)
-
-	time.Sleep(time.Second)
-	for i := 0; i <= myselfTestNodeSize; i++ {
-		nodes[i].receiver.Node.Display()
+	if forceQuitFailRate > forceQuitMaxFailRate {
+		_, _ = red.Printf("Force quit test failed with fail rate %.4f\n", forceQuitFailRate)
+	} else {
+		_, _ = green.Printf("Force quit test passed with fail rate %.4f\n", forceQuitFailRate)
 	}
-
-	for i := 0; i < 7; i++ {
-		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get(testKey[i]))
-		time.Sleep(time.Second)
+	if QASFailRate > QASMaxFailRate {
+		_, _ = red.Printf("Quit & Stabilize test failed with fail rate %.4f\n", QASFailRate)
+	} else {
+		_, _ = green.Printf("Quit & Stabilize test passed with fail rate %.4f\n", QASFailRate)
 	}
+}
 
-	/*time.Sleep(240 * time.Second)
-
-	for i := 0; i <= myselfTestNodeSize; i++ {
-		nodes[i].receiver.Node.Display()
-	}
-
-	return*/
-
-	for i := 0; i <= kvPairSize; i++ {
-		fmt.Println("Put ", i)
-		nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Put(strconv.Itoa(i), strconv.Itoa(i))
-	}
-
-	time.Sleep(time.Second)
-
-	for i := 0; i <= kvPairSize; i++ {
-		fmt.Println(nodes[nodesInNetwork[rand.Intn(len(nodesInNetwork))]].Get(strconv.Itoa(i)))
-	}
-
-	for i := myselfTestNodeSize / 2 + 1; i <= myselfTestNodeSize; i++ {
-		nodes[i].Quit()
-		fmt.Println("Node ", i, " Quit.")
-		time.Sleep(10 * time.Second)
-	}
-
-	for i := 0; i <= kvPairSize; i++ {
-		fmt.Println(nodes[nodesInNetwork[rand.Intn(10)]].Get(strconv.Itoa(i)))
-	}
-
-	time.Sleep(180 * time.Second)
-
-	for i := 0; i <= myselfTestNodeSize; i++ {
-		nodes[i].receiver.Node.Display()
-	}
+func usage() {
+	flag.PrintDefaults()
 }
